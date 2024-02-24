@@ -1,36 +1,6 @@
 {
-	"compilerOptions": {
-		"module": "esnext",
-		"moduleResolution": "bundler",
-		"target": "es2016",
-		"lib": ["esnext"],
-
-		"outDir": "./dist",
-		"paths": { "@/*": ["./src/*"] },
-		"rootDirs": ["./src"],
-
-		"allowJs": true,
-		"allowUnreachableCode": false,
-		"allowUnusedLabels": false,
-		"composite": true,
-		"declaration": true,
-		"esModuleInterop": true,
-		"exactOptionalPropertyTypes": false,
-		"forceConsistentCasingInFileNames": true,
-		"importHelpers": true,
-		"incremental": true,
-		"isolatedModules": true,
-		"newLine": "lf",
-		"noEmitOnError": true,
-		"noImplicitOverride": true,
-		"noImplicitReturns": true,
-		"noPropertyAccessFromIndexSignature": true,
-		"noUncheckedIndexedAccess": true,
-		"noUnusedLocals": true,
-		"noUnusedParameters": true,
-		"resolveJsonModule": true,
-		"skipLibCheck": true
-	},
+	"extends": "./tsconfig-base.json",
 	"exclude": ["node_modules"],
-	"include": ["src/**/*.ts"]
+	"include": ["src/**/*.ts"],
+	"references": [{ "path": "./src" }]
 }
