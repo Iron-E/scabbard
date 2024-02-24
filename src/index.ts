@@ -1,1 +1,1 @@
-export { Pipeline } from './pipeline';
+export { enqueue } from './pipelines';
