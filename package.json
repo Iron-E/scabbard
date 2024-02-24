@@ -14,8 +14,8 @@
 	"devDependencies": { "ts-node": "^10.9.2", "typescript": "^5.3.3" },
 	"engines": { "node": ">=21" },
 
-	"exports": { ".": "./dist/index.js" },
-	"files": ["dist/"],
-	"main": "dist/index.js",
+	"exports": { ".": "./dist/src/index.js" },
+	"files": ["dist/src/"],
+	"main": "dist/src/index.js",
 	"type": "module"
 }
