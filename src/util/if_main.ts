@@ -1,7 +1,7 @@
 import { pathToFileURL } from 'url';
 
 declare global {
-	interface ImportMeta {
+	interface String {
 		/**
 		 * @param path the {@link import.meta.url}
 		 * @returns whether this file is being run by `node` directly
@@ -17,6 +17,6 @@ declare global {
 }
 
 const arg = process.argv.at(1);
-globalThis.ImportMeta.prototype.is_main = function(this: ImportMeta): boolean {
-	return arg !== undefined && this.url === pathToFileURL(arg).href;
+String.prototype.is_main = function(this: string): boolean {
+	return arg !== undefined && this === pathToFileURL(arg).href;
 };

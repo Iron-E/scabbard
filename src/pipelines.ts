@@ -4,7 +4,7 @@ import './util';
 type Fn = (client: Client) => Promise<void>;
 
 declare global {
-	interface ImportMeta {
+	interface String {
 		/**
 		 * {@link run | Run}S all the {@link register}ed pipes in the pipeline if the file `path` was called directly by `node`.
 		 * @param path see {@link main}.
@@ -32,15 +32,15 @@ export async function run(): Promise<void> {
 		async client => {
 			for (const pipe of PIPES) {
 				const pipe_client = client.pipeline(pipe.name, { description: pipe.description });
-				pipe.fn(pipe_client);
+				await pipe.fn(pipe_client);
 			}
 		},
 		{ LogOutput: process.stderr },
 	);
 }
 
-globalThis.ImportMeta.prototype.run_pipelines_if_main = async function(this: globalThis.ImportMeta): Promise<void> {
+String.prototype.run_pipelines_if_main = async function(this: string): Promise<void> {
 	if (this.is_main()) {
-		run();
+		await run();
 	}
 };
