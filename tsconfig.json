@@ -1,9 +1,9 @@
 {
 	"compilerOptions": {
-		"lib": ["esnext"],
 		"module": "esnext",
 		"moduleResolution": "bundler",
 		"target": "es2016",
+		"lib": ["esnext"],
 
 		"outDir": "./dist",
 		"paths": { "@/*": ["./src/*"] },
