@@ -1,5 +1,5 @@
 import { connect, Client } from '@dagger.io/dagger';
-import { main } from './cli';
+import './util';
 
 type Fn = (client: Client) => Promise<void>;
 

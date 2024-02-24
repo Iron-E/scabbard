@@ -2,7 +2,7 @@
 	"author": "Iron-E",
 	"description": "Modular pipelines for dagger",
 	"license": "GPL-3.0",
-	"name": "scabbard",
+	"name": "@iron-e/scabbard",
 	"version": "0.1.0",
 
 	"bugs": { "url": "https://github.com/Iron-E/scabbard/issues" },
@@ -11,7 +11,7 @@
 	"repository": { "type": "git", "url": "git+https://github.com/Iron-E/scabbard.git" },
 
 	"dependencies": { "@dagger.io/dagger": "^0.9.11" },
-	"devDependencies": { "tsx": "^4.7.1" },
+	"devDependencies": { "ts-node": "^10.9.2", "typescript": "^5.3.3" },
 	"engines": { "node": ">=21" },
 
 	"exports": { ".": "./dist/index.js" },
