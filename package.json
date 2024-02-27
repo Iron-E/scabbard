@@ -12,8 +12,8 @@
 
 	"devDependencies": {
 		"ts-node": "^10.9.2",
-		"typescript": "^5.3.3",
-		"tsx": "^4.7.1"
+		"tsx": "^4.7.1",
+		"typescript": "^5.3.3"
 	},
 	"peerDependencies": { "@dagger.io/dagger": "^0.9.11" },
 	"engines": { "node": ">=21" },
