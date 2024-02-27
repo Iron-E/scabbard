@@ -23,5 +23,8 @@
 	"main": "dist/index.js",
 	"type": "module",
 
-	"scripts": { "dagger": "dagger run tsx" }
+	"scripts": {
+		"dagger": "dagger run tsx",
+		"prepare": "tsc -b"
+	}
 }
