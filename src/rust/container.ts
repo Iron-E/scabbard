@@ -51,7 +51,7 @@ Container.prototype.withCargoInstall = function(
 	features: readonly string[] = [],
 	defaultFeatures: boolean = true,
 ): Container {
-	const installArgs = ['cargo', 'install', '--force', crate, '--features', features.join(',')];
+	const installArgs = ['cargo', 'install', crate, '--features', features.join(',')];
 	if (!defaultFeatures) {
 		installArgs.push('--no-default-features');
 	}
