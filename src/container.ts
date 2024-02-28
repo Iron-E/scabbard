@@ -32,7 +32,7 @@ Container.prototype.fromWithDeps = function(
 ): Container {
 	let args: readonly string[];
 	if (from.includes("alpine")) {
-		args = ["apk", "install", "--no-cache"];
+		args = ["apk", "add", "--no-cache"];
 	} else {
 		throw Error(`The base system for '${from}' was not detected.`);
 	}
