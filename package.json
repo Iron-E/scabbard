@@ -29,7 +29,7 @@
 	"type": "module",
 
 	"scripts": {
-		"dagger": "dagger run tsx",
+		"dagger": "dagger run npx tsx",
 		"prepare": "tsc -b"
 	}
 }
