@@ -9,11 +9,11 @@ declare module '@dagger.io/dagger' {
 		 * @param opts see {@link Container.withDirectory}
 		 * @returns the container with the `path` available as the current working `directory`.
 		 */
-		withDirectoryWorkdir(this: this, path: string, directory: Directory, opts?: ContainerWithDirectoryOpts): this;
+		withWorkDirectory(this: this, path: string, directory: Directory, opts?: ContainerWithDirectoryOpts): this;
 	}
 }
 
-Container.prototype.withDirectoryWorkdir = function(
+Container.prototype.withWorkDirectory = function(
 	this: Container,
 	path: string,
 	directory: Directory,

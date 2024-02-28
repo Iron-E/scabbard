@@ -1,0 +1,61 @@
+# sets up the cargo caches on the given container
+# @return ContainerID!
+fragment WithCargoCache on Container {
+	pipeline(name: "mount cargo caches") {
+		withEnvVariable(name: "CARGO_HOME", value: "/usr/local/cargo/.ci_cache") {
+			withMountedCache(path: "/usr/local/cargo/.ci_cache/bin", cache: $cargoBinCache) {
+				withMountedCache(path: "/usr/local/cargo/.ci_cache/git/db", cache: $cargoDbCache) {
+					withMountedCache(path: "/usr/local/cargo/.ci_cache/registry/", cache: $cargoRegistryCache) {
+						...WithWorkDirectory
+					}
+				}
+			}
+		}
+	}
+}
+
+# sets and creates the work directory
+# @returns ContainerID
+fragment WithWorkDirectory on Container {
+	pipeline(name: "copy project") {
+		withDirectory(directory: $project, path: $projectMountPoint) {
+			withWorkdir(path: $projectMountPoint) {
+				return: id
+			}
+		}
+	}
+}
+
+# creates a container with common dependencies for rust projects
+# @returns ContainerID
+query WithDepsFrom(
+	$containerName: String! = "rust:alpine",
+	$cargoBinCache: CacheVolumeID!,
+	$cargoDbCache: CacheVolumeID!,
+	$cargoRegistryCache: CacheVolumeID!,
+	$project: DirectoryID!,
+	$projectMountPoint: String! = "/app"
+) {
+	pipeline(name: "build deps container") {
+		container {
+			from(address: $containerName) {
+				pipeline(name: "insall deps") {
+					withExec(args: [
+						"apk", "add", "--no-cache",
+						"clang",
+						"file",
+						"gcc",
+						"git",
+						"lld",
+						"musl-dev", "musl-dev",
+						"openssl", "openssl-dev",
+					]) {
+						withEnvVariable(name: "OPENSSL_DIR", value: "/usr") {
+							...WithCargoCache
+						}
+					}
+				}
+			}
+		}
+	}
+}

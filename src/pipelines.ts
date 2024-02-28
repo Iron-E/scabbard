@@ -30,6 +30,7 @@ export function enqueue(name: string, description: string, fn: Fn): void {
 export async function run(): Promise<void> {
 	connect(
 		async client => {
+			client.cacheVolume
 			for (const pipe of PIPES) {
 				const pipe_client = client.pipeline(pipe.name, { description: pipe.description });
 				await pipe.fn(pipe_client);
