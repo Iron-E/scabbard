@@ -13,7 +13,7 @@ export async function* readIgnoreFile(path: string = "dockerignore"): AsyncGener
 
 	const lineReader = readline.createInterface({ crlfDelay: Infinity, input: fileStream });
 	for await (const line of lineReader) {
-		if (line.search(IGNORE_FILE_COMMENT) < 0) {
+		if (line.length > 0 && line.search(IGNORE_FILE_COMMENT) < 0) {
 			yield line;
 		}
 	}
