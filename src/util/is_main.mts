@@ -1,5 +1,3 @@
-import { pathToFileURL } from 'url';
-
 declare global {
 	interface String {
 		/**
@@ -18,5 +16,5 @@ declare global {
 
 const arg = process.argv.at(1);
 String.prototype.is_main = function(this: string): boolean {
-	return arg !== undefined && this === pathToFileURL(arg).href;
+	return arg !== undefined && this === arg;
 };

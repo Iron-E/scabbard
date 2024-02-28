@@ -36,7 +36,7 @@ enqueue('run my test' , async client => {
 });
 
 // run queued pipelines if executing this file directly (e.g. `tsx foo.ts`)
-import.meta.url.run_pipelines_if_main();
+import.meta.filename.run_pipelines_if_main();
 ```
 
 ## Contributing
