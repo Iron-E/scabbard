@@ -4,47 +4,44 @@ Miscellaneous utilities for [dagger].
 
 ## Installation
 
-In your project, where you keep your [dagger] files (e.g. `my_project/ci`), run:
-
 ```sh
-git submodule init https://github.com/Iron-E/scabbard
+# required
+npm install --save-dev https://github.com/Iron-E/scabbard
 ```
 
-> [!TIP]
->
-> If you only need specific files, you can run [`git-sparse-checkout`].
+It is suggested to use [tsx] with this project.
 
-## Usage
+## Features
 
-### GraphQL queries
+* Pipelines as modules. Queue pipelines by importing modules.
+* File-system utilities (e.g. read `.*ignore` files).
+* API anti-boilerplate.
+	* e.g. `client.withDirectory("/foo", bar).withWorkdir("/foo")` -> `client.withWorkDirectory("/foo", bar)`
+* Provides common actions for:
+	* [x] Rust
 
-The GraphQL queries can be used with the following command:
+### Pipeline Modules
 
-```sh
-dagger query --doc "<path_to_document>.graphql" --focus \
-	[... --var foo=bar ] \
-	<query_name> |
-	jq -r '.. | .return? // empty'
+`scabbard` supports creating modules that act as pipelines. To do this, use the following template:
+
+```typescript
+import { enqueue } from '@iron-e/scabbard';
+
+// (optional) import other pipeline modules. Its pipelines will queued
+import from './foo-bar';
+
+// queue additional pipelines
+enqueue('run my test' , async client => {
+	// what happens when the pipeline runs
+});
+
+// run queued pipelines if executing this file directly (e.g. `tsx foo.ts`)
+import.meta.url.run_pipelines_if_main();
 ```
-
-> [!IMPORTANT]
->
-> Uses [`jq`] to parse output
-
-### Scripts
-
-Simply `source` the file you wish to use:
-
-```sh
-source "<path_to_document>.sh"
-```
-
-Then you can use the functions inside the file.
 
 ## Contributing
 
 Have snippets to share? Feel free to open a PR!
 
-[`git-sparse-checkout`]: https://git-scm.com/docs/git-sparse-checkout
-[`jq`]: https://github.com/jqlang/jq
 [dagger]: https://github.com/dagger/dagger
+[tsx]: https://github.com/privatenumber/tsx
