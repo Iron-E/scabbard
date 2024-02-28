@@ -10,11 +10,11 @@ declare global {
 		 * }
 		 * ```
 		 */
-		is_main(this: this): boolean
+		isMain(this: this): boolean
 	}
 }
 
 const arg = process.argv.at(1);
-String.prototype.is_main = function(this: string): boolean {
+String.prototype.isMain = function(this: string): boolean {
 	return arg !== undefined && this === arg;
 };

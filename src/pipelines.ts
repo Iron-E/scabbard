@@ -9,7 +9,7 @@ declare global {
 		 * {@link run | Run}S all the {@link register}ed pipes in the pipeline if the file `path` was called directly by `node`.
 		 * @param path see {@link main}.
 		 */
-		run_pipelines_if_main(this: Readonly<this>): Promise<void>;
+		runPipelinesIfMain(this: Readonly<this>): Promise<void>;
 	}
 }
 
@@ -30,8 +30,8 @@ export function enqueue(name: string, fn: Fn): void {
 export async function run(): Promise<void> {
 	connect(
 		async client => {
-			const started_pipes = Array.from(start_pipes_on(client));
-			await Promise.all(started_pipes);
+			const startedPipes = Array.from(startPipesOn(client));
+			await Promise.all(startedPipes);
 		},
 		{ LogOutput: process.stderr },
 	);
@@ -41,15 +41,15 @@ export async function run(): Promise<void> {
  * @param client to start the pipes on
  * @returns handles to the started pipes
  */
-function* start_pipes_on(client: Client): Generator<Promise<void>, void> {
+function* startPipesOn(client: Client): Generator<Promise<void>, void> {
 	for (const pipe of PIPES) {
-		const pipe_client = client.pipeline(pipe.name);
-		yield pipe.fn(pipe_client);
+		const pipeClient = client.pipeline(pipe.name);
+		yield pipe.fn(pipeClient);
 	}
 }
 
-String.prototype.run_pipelines_if_main = async function(this: string): Promise<void> {
-	if (this.is_main()) {
+String.prototype.runPipelinesIfMain = async function(this: string): Promise<void> {
+	if (this.isMain()) {
 		await run();
 	}
 };

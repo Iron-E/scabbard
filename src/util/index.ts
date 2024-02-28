@@ -1,1 +1,1 @@
-export * from './is_main.mjs';
+export * from './string.mjs';
