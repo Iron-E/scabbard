@@ -1,7 +1,7 @@
 import { connect, type Client } from '@dagger.io/dagger';
 import './util';
 
-type Fn = (client: Readonly<Client>) => Promise<void>;
+type Fn = (client: Client) => Promise<void>;
 
 declare global {
 	interface String {
@@ -41,7 +41,7 @@ export async function run(): Promise<void> {
  * @param client to start the pipes on
  * @returns handles to the started pipes
  */
-function* start_pipes_on(client: Readonly<Client>): Generator<Promise<void>, void> {
+function* start_pipes_on(client: Client): Generator<Promise<void>, void> {
 	for (const pipe of PIPES) {
 		const pipe_client = client.pipeline(pipe.name);
 		yield pipe.fn(pipe_client);
