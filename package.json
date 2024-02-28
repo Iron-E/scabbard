@@ -28,8 +28,5 @@
 	"main": "dist/index.js",
 	"type": "module",
 
-	"scripts": {
-		"dagger": "dagger run npx tsx",
-		"prepare": "tsc -b"
-	}
+	"scripts": { "prepare": "tsc -b" }
 }
