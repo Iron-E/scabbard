@@ -34,7 +34,7 @@ declare module '@dagger.io/dagger' {
 }
 
 Client.prototype.cargoCacheVolumes = function(
-	this: Client,
+	this: Readonly<Client>,
 	binVolume: string = BIN_VOLUME_ID,
 	gitDbVolume: string = GIT_DB_VOLUME_ID,
 	registryVolume: string = REGISTRY_VOLUME_ID,
