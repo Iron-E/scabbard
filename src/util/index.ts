@@ -1,1 +1,1 @@
-export * from './if_main';
+import './if_main';

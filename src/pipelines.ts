@@ -9,12 +9,12 @@ declare global {
 		 * {@link run | Run}S all the {@link register}ed pipes in the pipeline if the file `path` was called directly by `node`.
 		 * @param path see {@link main}.
 		 */
-		run_pipelines_if_main(this: this): Promise<void>;
+		run_pipelines_if_main(this: Readonly<this>): Promise<void>;
 	}
 }
 
 /** Registered pipes to run */
-const PIPES: { name: string, fn: Fn }[] = [];
+const PIPES: Readonly<{ name: string, fn: Fn }>[] = [];
 
 /**
  * Queues a pipeline to be {@link run}.

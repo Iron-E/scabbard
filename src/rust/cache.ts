@@ -1,9 +1,9 @@
 import { type CacheVolume, Client } from '@dagger.io/dagger';
 
 /** Cache volumes for Cargo */
-type CargoCacheVolumes = Readonly<{
-	bin: CacheVolume,
-	git: { db: CacheVolume },
+export type CargoCacheVolumes = Readonly<{
+	bin: CacheVolume
+	git: Readonly<{ db: CacheVolume }>,
 	registry: CacheVolume,
 }>
 
