@@ -1,6 +1,8 @@
 import type { ContainerWithDirectoryOpts, Directory } from '@dagger.io/dagger';
 import { Container } from '@dagger.io/dagger';
 
+export type ContainerWithWorkDirectoryOpts = Readonly<ContainerWithDirectoryOpts & { path?: string }>;
+
 declare module '@dagger.io/dagger' {
 	interface Container {
 		/**
@@ -18,9 +20,8 @@ declare module '@dagger.io/dagger' {
 		 */
 		withWorkDirectory(
 			this: Readonly<this>,
-			path: string,
 			directory: Directory,
-			opts?: Readonly<ContainerWithDirectoryOpts>,
+			opts?: ContainerWithWorkDirectoryOpts,
 		): this;
 	}
 }
@@ -45,9 +46,8 @@ Container.prototype.fromWithDeps = function(
 
 Container.prototype.withWorkDirectory = function(
 	this: Readonly<Container>,
-	path: string,
 	directory: Directory,
-	opts?: Readonly<ContainerWithDirectoryOpts>,
+	{ path = '/project', ...opts }: ContainerWithWorkDirectoryOpts,
 ): Container {
 	return this.withDirectory(path, directory, opts).withWorkdir(path);
 };

@@ -1,11 +1,12 @@
 import { type CacheVolume, Client } from '@dagger.io/dagger';
 
 /** Cache volumes for Cargo */
-export type CargoCacheVolumes = Readonly<{
-	bin: CacheVolume
-	git: Readonly<{ db: CacheVolume }>,
-	registry: CacheVolume,
-}>
+export type CargoCacheVolumes<T = CacheVolume> = Readonly<
+	& Record<'bin' | 'registry', T>
+	& Record<'git', Readonly<Record<'db', T>>>
+>
+
+export type CargoCacheVolumesOpts = CargoCacheVolumes<string>;
 
 /** The default cargo bin volume */
 export const BIN_VOLUME_ID = "cargo-bin" as const;
@@ -24,24 +25,21 @@ declare module '@dagger.io/dagger' {
 		 * @param registryVolume the unique name for the registry volume. Defaults to {@link REGISTRY_VOLUME_ID}
 		 * @returns the cache volumes
 		 */
-		cargoCacheVolumes(
-			this: this,
-			binVolume?: string,
-			gitDbVolume?: string,
-			registryVolume?: string,
-		): CargoCacheVolumes;
+		cargoCacheVolumes(this: this, opts?: CargoCacheVolumesOpts): CargoCacheVolumes;
 	}
 }
 
 Client.prototype.cargoCacheVolumes = function(
 	this: Readonly<Client>,
-	binVolume: string = BIN_VOLUME_ID,
-	gitDbVolume: string = GIT_DB_VOLUME_ID,
-	registryVolume: string = REGISTRY_VOLUME_ID,
+	{
+		bin = BIN_VOLUME_ID,
+		git = { db: GIT_DB_VOLUME_ID },
+		registry = REGISTRY_VOLUME_ID,
+	}: CargoCacheVolumesOpts,
 ): CargoCacheVolumes {
 	return {
-		bin: this.cacheVolume(binVolume),
-		git: { db: this.cacheVolume(gitDbVolume) },
-		registry: this.cacheVolume(registryVolume),
+		bin: this.cacheVolume(bin),
+		git: { db: this.cacheVolume(git.db) },
+		registry: this.cacheVolume(registry),
 	};
 };

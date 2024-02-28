@@ -1,6 +1,12 @@
 import { Container } from '@dagger.io/dagger';
 import type { CargoCacheVolumes } from './cache';
 
+export type ContainerWithCargoCacheOpts = Readonly<{ mountPoint?: string }>;
+export type ContainerWithCargoInstallOpts = Readonly<{
+	features?: readonly string[],
+	defaultFeatures?: boolean,
+}>;
+
 /** base dependencies for working with rust projects */
 export const BASE_DEPENDENCIES = ["clang", "file", "gcc", "git", "lld", "musl-dev", "openssl", "openssl-dev"] as const;
 
@@ -15,7 +21,11 @@ declare module '@dagger.io/dagger' {
 		 * @see {@link Client.cargoCacheVolumes}
 		 * @see {@link Container.withMountedCache}
 		 */
-		withCargoCache(this: Readonly<this>, volumes: CargoCacheVolumes, mountPoint?: string): this;
+		withCargoCache(
+			this: Readonly<this>,
+			volumes: CargoCacheVolumes,
+			opts?: ContainerWithCargoCacheOpts,
+		): this;
 
 		/**
 		 * @param crate from {@link crates.io}.
@@ -27,8 +37,7 @@ declare module '@dagger.io/dagger' {
 		withCargoInstall(
 			this: Readonly<this>,
 			crate: string,
-			features?: readonly string[],
-			defaultFeatures?: boolean,
+			opts?: ContainerWithCargoInstallOpts,
 		): this;
 	}
 }
@@ -36,7 +45,7 @@ declare module '@dagger.io/dagger' {
 Container.prototype.withCargoCache = function(
 	this: Container,
 	volumes: CargoCacheVolumes,
-	mountPoint: string = CARGO_CACHE_MOUNT_POINT,
+	{ mountPoint = CARGO_CACHE_MOUNT_POINT }: ContainerWithCargoCacheOpts,
 ): Container {
 	return this
 		.withEnvVariable('CARGO_HOME', mountPoint)
@@ -48,8 +57,7 @@ Container.prototype.withCargoCache = function(
 Container.prototype.withCargoInstall = function(
 	this: Container,
 	crate: string,
-	features: readonly string[] = [],
-	defaultFeatures: boolean = true,
+	{ features = [], defaultFeatures = true }: ContainerWithCargoInstallOpts,
 ): Container {
 	const installArgs = ['cargo', 'install', crate, '--features', features.join(',')];
 	if (!defaultFeatures) {
