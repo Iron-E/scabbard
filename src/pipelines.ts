@@ -1,7 +1,7 @@
 import { connect, type Client } from '@dagger.io/dagger';
 import './util';
 
-type Fn = (client: Client) => Promise<void>;
+type Fn = (client: Readonly<Client>) => Promise<void>;
 
 declare global {
 	interface String {
@@ -30,14 +30,22 @@ export function enqueue(name: string, fn: Fn): void {
 export async function run(): Promise<void> {
 	connect(
 		async client => {
-			client.cacheVolume
-			for (const pipe of PIPES) {
-				const pipe_client = client.pipeline(pipe.name);
-				await pipe.fn(pipe_client);
-			}
+			const started_pipes = Array.from(start_pipes_on(client));
+			await Promise.all(started_pipes);
 		},
 		{ LogOutput: process.stderr },
 	);
+}
+
+/**
+ * @param client to start the pipes on
+ * @returns handles to the started pipes
+ */
+function* start_pipes_on(client: Readonly<Client>): Generator<Promise<void>, void> {
+	for (const pipe of PIPES) {
+		const pipe_client = client.pipeline(pipe.name);
+		yield pipe.fn(pipe_client);
+	}
 }
 
 String.prototype.run_pipelines_if_main = async function(this: string): Promise<void> {
