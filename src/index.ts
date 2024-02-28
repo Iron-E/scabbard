@@ -1,2 +1,4 @@
-export * as fs from './fs';
-export * as pipelines from './pipelines';
+import './container';
+
+export * from './fs';
+export * from './pipelines';

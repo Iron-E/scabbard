@@ -20,8 +20,8 @@
 
 	"exports": {
 		".": { "default": "./dist/index.js", "types": "./dist/index.d.ts" },
-		"./container": { "default": "./dist/container.js", "types": "./dist/container.d.ts" },
 		"./fs": { "default": "./dist/fs.js", "types": "./dist/fs.d.ts" },
+		"./pipelines": { "default": "./dist/pipelines.js", "types": "./dist/pipelines.d.ts" },
 		"./rust": { "default": "./dist/rust/index.js", "types": "./dist/rust/index.d.ts" }
 	},
 	"files": ["dist/"],
