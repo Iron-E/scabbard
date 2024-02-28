@@ -14,7 +14,7 @@ declare global {
 }
 
 /** Registered pipes to run */
-const PIPES: { name: string, description: string, fn: Fn }[] = [];
+const PIPES: { name: string, fn: Fn }[] = [];
 
 /**
  * Queues a pipeline to be {@link run}.
@@ -22,8 +22,8 @@ const PIPES: { name: string, description: string, fn: Fn }[] = [];
  * @param description of the pipe
  * @param fn what the pipe does
  */
-export function enqueue(name: string, description: string, fn: Fn): void {
-	PIPES.push({ name, description, fn });
+export function enqueue(name: string, fn: Fn): void {
+	PIPES.push({ name, fn });
 }
 
 /** Runs all the {@link register}ed pipes in the pipeline. */
@@ -32,7 +32,7 @@ export async function run(): Promise<void> {
 		async client => {
 			client.cacheVolume
 			for (const pipe of PIPES) {
-				const pipe_client = client.pipeline(pipe.name, { description: pipe.description });
+				const pipe_client = client.pipeline(pipe.name);
 				await pipe.fn(pipe_client);
 			}
 		},
