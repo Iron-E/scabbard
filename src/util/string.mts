@@ -1,11 +1,11 @@
 declare global {
 	interface String {
 		/**
-		 * @param path the {@link import.meta.url}
+		 * @param path the {@link import.meta.filename}
 		 * @returns whether this file is being run by `node` directly
 		 * @example
 		 * ```typescript
-		 * if (main()) {
+		 * if ("foo".isMain()) {
 		 *   console.log("I'm running from the command line"):
 		 * }
 		 * ```
