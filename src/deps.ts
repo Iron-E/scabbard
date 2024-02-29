@@ -50,18 +50,27 @@ export class Dependencies {
 			return dep;
 		}
 
-		const dependsOn: Dep<true>['dependsOn'] = new Set();
-		for (const dependency of dep.dependsOn) {
-			dependsOn.add(dependency);
-		}
+		const dependsOn = this.getTransitive(dep, 'dependsOn');
+		const dependedOnBy = this.getTransitive(dep, 'dependedOnBy');
 
-		const dependedOnBy: Dep<true>['dependedOnBy'] = new Set();
-		for (const dependent of dep.dependedOnBy) {
-			dependedOnBy.add(dependent);
-		}
-
-		throw Error("unimplemented");
 		return { dependsOn, dependedOnBy };
+	}
+
+	/**
+	 * @param dep to get the deps of
+	 * @param visited the seen deps. **Modified by this function**
+	 */
+	private getTransitive<K extends keyof Dep>(this: this, dep: Dep, kind: K, visited: Dep<true>[K] = new Set()): Dep<true>[K] {
+		for (const d of dep[kind]) {
+			if (!visited.has(d)) { // new dependency, recurse
+				const subDep = this.getOrInit(d);
+				this.getTransitive(subDep, kind, visited);
+			}
+
+			visited.add(d);
+		}
+
+		return visited;
 	}
 
 	/**
