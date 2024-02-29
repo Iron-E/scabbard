@@ -1,89 +1,79 @@
-
+import type { RWSet } from "./util";
 
 /** The name of a {@link Dependency} */
-export type DepKey = string;
-
-/** What this depends on */
-export type DepValue = ReadonlySet<DepKey>;
-
-/** Mutable {@link DepValue}, for internal use */
-type _DepValue = Set<DepKey>;
+export type DepName = string;
 
 /** A dep - viewed as both a dependency and a dependent */
-export type Dep<Value extends DepValue = DepValue> = Readonly<{
+export type Dep<Mutable extends boolean = false> = Readonly<{
 	/** What depends on this */
-	asDependency: Value,
+	dependsOn: RWSet<DepName, Mutable>,
 
 	/** What this depends on */
-	asDependent: Value,
+	dependedOnBy: RWSet<DepName, Mutable>,
 }>;
+
+/** Mutable version of {@link Dep} */
+type _Dep = Dep<true>;
 
 /** A system of connected {@link Dependency | Dependenc}ies */
 export class Dependencies {
-	constructor(
-		private readonly byDependencies: Record<DepKey, _DepValue> = {},
-		private readonly byDependents: Record<DepKey, _DepValue> = {},
-	) { }
+	constructor(private readonly deps: Record<DepName, _Dep> = {}) { }
 
 	/** The names of all dependencies registered */
 	public get depNames(): string[] {
-		return Object.keys(this.byDependents);
+		return Object.keys(this.deps);
 	}
 
 	/**
-	 * @param dependentName the {@link DepKey | name} which has the {@link Dependency | Dependenc}ies.
-	 * @param dependencyNames the dependencies `name` depends on
+	 * @param name the {@link DepName | name} which has the {@link Dependency | Dependenc}ies.
+	 * @param dependencies the dependencies `name` depends on
 	 */
-	public add(this: this, dependentName: DepKey, dependencyNames: readonly DepKey[]): void {
-		const dependent = this.getOrInit(dependentName);
+	public add(this: this, name: DepName, dependencies: readonly DepName[]): void {
+		const dependsOn = this.getOrInit(name);
 
-		for (const dependencyName of dependencyNames) {
-			dependent.asDependent.add(dependencyName);
+		for (const dependency of dependencies) {
+			dependsOn.dependsOn.add(dependency);
 
-			const dependency = this.getOrInit(dependencyName);
-			dependency.asDependency.add(dependentName);
+			const dependedOn = this.getOrInit(dependency);
+			dependedOn.dependedOnBy.add(name);
 		}
 	}
 
 	/**
-	 * @param name the {@link DepKey | name} of the {@link Dependency} to get.
+	 * @param name the {@link DepName | name} of the {@link Dependency} to get.
 	 * @param [transitive=false] whether to include transitive dependencies at the top-level
 	 * @returns the existing {@link Dependency}, or a new one if it did not exist.
 	 */
-	public get(this: this, name: DepKey, transitive: boolean = false): Dep {
+	public get(this: this, name: DepName, transitive: boolean = false): Dep {
 		const dep = this.getOrInit(name);
 		if (!transitive) {
 			return dep;
 		}
 
-		const asDependency: _DepValue = new Set();
-		for (const dependency of dep.asDependency) {
-			throw Error("unimplemented");
+		const dependsOn: Dep<true>['dependsOn'] = new Set();
+		for (const dependency of dep.dependsOn) {
+			dependsOn.add(dependency);
 		}
 
-		const asDependent: _DepValue = new Set();
-		for (const dependent of dep.asDependent) {
-			throw Error("unimplemented");
+		const dependedOnBy: Dep<true>['dependedOnBy'] = new Set();
+		for (const dependent of dep.dependedOnBy) {
+			dependedOnBy.add(dependent);
 		}
 
-		return { asDependency, asDependent };
+		throw Error("unimplemented");
+		return { dependsOn, dependedOnBy };
 	}
 
 	/**
 		* Same as {@link getOrInit} but typed to allow mutation.
 		* @see {@link getOrInit}
 	*/
-	private getOrInit(this: this, name: DepKey): Dep<_DepValue> {
-		let dependent = this.byDependents[name];
-		if (dependent == undefined) {
-			this.byDependents[name] = dependent = new Set();
+	private getOrInit(this: this, name: DepName): _Dep {
+		let dep = this.deps[name]
+		if (dep === undefined) {
+			this.deps[name] = dep = { dependsOn: new Set(), dependedOnBy: new Set() };
 		}
 
-		let dependency = this.byDependencies[name];
-		if (dependency == undefined) {
-			this.byDependencies[name] = dependency = new Set();
-		}
-
-		return { asDependency: dependency, asDependent: dependent };
+		return dep;
 	}
 }
