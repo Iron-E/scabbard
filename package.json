@@ -4,29 +4,59 @@
 	"license": "GPL-3.0",
 	"name": "@iron-e/scabbard",
 	"version": "0.1.0",
-
-	"bugs": { "url": "https://github.com/Iron-E/scabbard/issues" },
+	"bugs": {
+		"url": "https://github.com/Iron-E/scabbard/issues"
+	},
 	"homepage": "https://github.com/Iron-E/scabbard#readme",
-	"keywords": ["chainguard-dev/dagger", "ci", "ci/cd", "dagger", "dagger.io", "pipelines", "scabbard"],
-	"repository": { "type": "git", "url": "git+https://github.com/Iron-E/scabbard.git" },
-
+	"keywords": [
+		"chainguard-dev/dagger",
+		"ci",
+		"ci/cd",
+		"dagger",
+		"dagger.io",
+		"pipelines",
+		"scabbard"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Iron-E/scabbard.git"
+	},
 	"devDependencies": {
-		"ts-node": "^10.9.2",
 		"tsx": "^4.7.1",
-		"typescript": "^5.3.3"
+		"typescript": "^5.3.3",
+		"vitest": "^1.3.1"
 	},
-	"peerDependencies": { "@dagger.io/dagger": "^0.9.11" },
-	"engines": { "node": ">=21" },
-
+	"peerDependencies": {
+		"@dagger.io/dagger": "^0.9.11"
+	},
+	"engines": {
+		"node": ">=21"
+	},
 	"exports": {
-		".": { "default": "./dist/index.js", "types": "./dist/index.d.ts" },
-		"./fs": { "default": "./dist/fs.js", "types": "./dist/fs.d.ts" },
-		"./pipelines": { "default": "./dist/pipelines.js", "types": "./dist/pipelines.d.ts" },
-		"./rust": { "default": "./dist/rust/index.js", "types": "./dist/rust/index.d.ts" }
+		".": {
+			"default": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		},
+		"./fs": {
+			"default": "./dist/fs.js",
+			"types": "./dist/fs.d.ts"
+		},
+		"./pipelines": {
+			"default": "./dist/pipelines.js",
+			"types": "./dist/pipelines.d.ts"
+		},
+		"./rust": {
+			"default": "./dist/rust/index.js",
+			"types": "./dist/rust/index.d.ts"
+		}
 	},
-	"files": ["dist/"],
+	"files": [
+		"dist/"
+	],
 	"main": "dist/index.js",
 	"type": "module",
-
-	"scripts": { "prepare": "tsc -b" }
+	"scripts": {
+		"prepare": "tsc -b",
+		"test": "vitest"
+	}
 }
