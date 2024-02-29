@@ -1,11 +1,12 @@
-import { Container } from '@dagger.io/dagger';
 import type { CargoCacheVolumes } from './cache';
+import type { Dict } from '../util';
+import { Container } from '@dagger.io/dagger';
 
-export type ContainerWithCargoCacheOpts = Readonly<{ mountPoint?: string }>;
-export type ContainerWithCargoInstallOpts = Readonly<{
-	features?: readonly string[],
-	defaultFeatures?: boolean,
-}>;
+export type ContainerWithCargoCacheOpts = Dict<'mountPoint', string>;
+export type ContainerWithCargoInstallOpts =
+	& Dict<'features', readonly string[]>
+	& Dict<'defaultFeatures', boolean>
+	;
 
 /** base dependencies for working with rust projects */
 export const BASE_DEPENDENCIES = ["clang", "file", "gcc", "git", "lld", "musl-dev", "openssl", "openssl-dev"] as const;

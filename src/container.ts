@@ -1,7 +1,11 @@
 import type { ContainerWithDirectoryOpts, Directory } from '@dagger.io/dagger';
+import type { Dict } from './util';
 import { Container } from '@dagger.io/dagger';
 
-export type ContainerWithWorkDirectoryOpts = Readonly<ContainerWithDirectoryOpts & { path?: string }>;
+export type ContainerWithWorkDirectoryOpts =
+	& Dict<'path', string>
+	& Readonly<ContainerWithDirectoryOpts>
+	;
 
 declare module '@dagger.io/dagger' {
 	interface Container {
