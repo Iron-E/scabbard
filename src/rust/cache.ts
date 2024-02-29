@@ -1,12 +1,21 @@
 import { type CacheVolume, Client } from '@dagger.io/dagger';
 
-/** Cache volumes for Cargo */
-export type CargoCacheVolumes<T = CacheVolume> = Readonly<
-	& Record<'bin' | 'registry', T>
-	& Record<'git', Readonly<Record<'db', T>>>
->
+/** Cache volumes for Cargo. Corresponds to filepaths in `$CARGO_HOME` */
+export type CargoCacheVolumes<T = CacheVolume> = Readonly<{
+	/** bin cache */
+	bin: T,
 
-export type CargoCacheVolumesOpts = CargoCacheVolumes<string>;
+	/** git cache */
+	git: Readonly<{
+		/** db cache */
+		db: T,
+	}>,
+
+	/** registry cache */
+	registry: T,
+}>;
+
+export type CargoCacheVolumesOpts = Partial<CargoCacheVolumes<string>>;
 
 /** The default cargo bin volume */
 export const BIN_VOLUME_ID = "cargo-bin" as const;
@@ -35,7 +44,7 @@ Client.prototype.cargoCacheVolumes = function(
 		bin = BIN_VOLUME_ID,
 		git = { db: GIT_DB_VOLUME_ID },
 		registry = REGISTRY_VOLUME_ID,
-	}: CargoCacheVolumesOpts,
+	}: CargoCacheVolumesOpts = {},
 ): CargoCacheVolumes {
 	return {
 		bin: this.cacheVolume(bin),

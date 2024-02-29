@@ -46,7 +46,7 @@ declare module '@dagger.io/dagger' {
 Container.prototype.withCargoCache = function(
 	this: Container,
 	volumes: CargoCacheVolumes,
-	{ mountPoint = CARGO_CACHE_MOUNT_POINT }: ContainerWithCargoCacheOpts,
+	{ mountPoint = CARGO_CACHE_MOUNT_POINT }: ContainerWithCargoCacheOpts = {},
 ): Container {
 	return this
 		.withEnvVariable('CARGO_HOME', mountPoint)
@@ -58,7 +58,7 @@ Container.prototype.withCargoCache = function(
 Container.prototype.withCargoInstall = function(
 	this: Container,
 	crate: string,
-	{ features = [], defaultFeatures = true }: ContainerWithCargoInstallOpts,
+	{ features = [], defaultFeatures = true }: ContainerWithCargoInstallOpts = {},
 ): Container {
 	const installArgs = ['cargo', 'install', crate, '--features', features.join(',')];
 	if (!defaultFeatures) {
