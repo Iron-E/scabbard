@@ -2,13 +2,13 @@ import * as fs from 'node:fs';
 import * as readline from 'readline';
 import type { Dict, FieldName, Mut, Superset } from './util';
 
-/** Options for {@link readIgnoreFile} */
+/** Options for {@link parseIgnoreFile} */
 export type ReadIgnoreFileOpts = Superset<{
 	/** enable reading from the cache, or writing to the cache for this operation */
 	useCache: boolean,
 }>;
 
-const IGNORE_FILE_COMMENT: Readonly<RegExp> = /^\s*[^#]/;
+const IGNORE_FILE_COMMENT_LINE: Readonly<RegExp> = /\s*#/;
 const READ_STREAM_OPTIONS = { encoding: 'utf-8' } as const;
 
 const FILE_CACHE: Mut<Dict<FieldName, readonly string[]>> = {};
@@ -20,7 +20,7 @@ const FILE_CACHE: Mut<Dict<FieldName, readonly string[]>> = {};
  * @remarks
  * Files are cached after reading. Repeated calls will simply read back the remembered information
  */
-export async function* readIgnoreFile(
+export async function* parseIgnoreFile(
 	path: string = ".dockerignore",
 	{ useCache = true }: ReadIgnoreFileOpts = {},
 ): AsyncGenerator<string, void, undefined> {
@@ -36,7 +36,7 @@ export async function* readIgnoreFile(
 	const fileStream = fs.createReadStream(path, READ_STREAM_OPTIONS);
 	const lineReader = readline.createInterface({ crlfDelay: Infinity, input: fileStream });
 	for await (const line of lineReader) {
-		if (line.length > 0 && line.search(IGNORE_FILE_COMMENT) < 0) {
+		if (line.length > 0 && line.search(IGNORE_FILE_COMMENT_LINE) < 0) {
 			lines.push(line);
 			yield line;
 		}

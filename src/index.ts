@@ -6,4 +6,4 @@ export type * from './pipelines';
 export type * from './util';
 
 export { enqueue, run } from './pipelines';
-export { readIgnoreFile } from './fs';
+export { parseIgnoreFile as readIgnoreFile } from './fs';
