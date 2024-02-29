@@ -1,10 +1,4 @@
-export {
-	BIN_VOLUME_ID,
-	GIT_DB_VOLUME_ID,
-	REGISTRY_VOLUME_ID,
-	type CargoCacheVolumes,
-	type CargoCacheVolumesOpts,
-} from './cache';
+export { type CargoCacheVolumesOpts } from './cache';
 
 export {
 	BASE_DEPENDENCIES,

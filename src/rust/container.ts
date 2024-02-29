@@ -1,12 +1,23 @@
-import type { CargoCacheVolumes } from './cache';
-import type { Dict } from '../util';
-import { Container } from '@dagger.io/dagger';
+import type { Superset } from '../util';
+import { Container, type CacheVolume } from '@dagger.io/dagger';
 
-export type ContainerWithCargoCacheOpts = Dict<'mountPoint', string>;
-export type ContainerWithCargoInstallOpts =
-	& Dict<'features', readonly string[]>
-	& Dict<'defaultFeatures', boolean>
-	;
+/** Options for {@link Container.withCargoHome} */
+export type ContainerWithCargoCacheOpts = Superset<{
+	/** the mount point for cargo home */
+	mountPoint: string,
+}>;
+
+/** Options for {@link Container.withCargoInstall} */
+export type ContainerWithCargoInstallOpts = Superset<{
+	/** If `false`, use `--no-default-features` */
+	defaultFeatures: boolean,
+
+	/** The features to enable while installing */
+	features: readonly string[],
+
+	/** Use `--force` */
+	force: boolean,
+}>;
 
 /** base dependencies for working with rust projects */
 export const BASE_DEPENDENCIES = ["clang", "file", "gcc", "git", "lld", "musl-dev", "openssl", "openssl-dev"] as const;
@@ -19,14 +30,10 @@ declare module '@dagger.io/dagger' {
 		 * @param volumes the cache volumes.
 		 * @param mountPoint the root dir where the caches are mounted. Defaults to {@link CARGO_CACHE_MOUNT_POINT}
 		 * @returns the container with the cargo cache volumes mounted
-		 * @see {@link Client.cargoCacheVolumes}
+		 * @see {@link Client.cargoHomeCache}
 		 * @see {@link Container.withMountedCache}
 		 */
-		withCargoCache(
-			this: Readonly<this>,
-			volumes: CargoCacheVolumes,
-			opts?: ContainerWithCargoCacheOpts,
-		): this;
+		withCargoHome(this: Readonly<this>, volume: CacheVolume, opts?: ContainerWithCargoCacheOpts): this;
 
 		/**
 		 * @param crate from {@link crates.io}.
@@ -35,35 +42,29 @@ declare module '@dagger.io/dagger' {
 		 * @returns the container with the `path` available as the current working `directory`.
 		 * @see `cargo install --help`
 		 */
-		withCargoInstall(
-			this: Readonly<this>,
-			crate: string,
-			opts?: ContainerWithCargoInstallOpts,
-		): this;
+		withCargoInstall(this: Readonly<this>, crate: string, opts?: ContainerWithCargoInstallOpts): this;
 	}
 }
 
-Container.prototype.withCargoCache = function(
+Container.prototype.withCargoHome = function(
 	this: Container,
-	volumes: CargoCacheVolumes,
+	volume: CacheVolume,
 	{ mountPoint = CARGO_CACHE_MOUNT_POINT }: ContainerWithCargoCacheOpts = {},
 ): Container {
 	return this
 		.withEnvVariable('CARGO_HOME', mountPoint)
-		.withMountedCache(`${mountPoint}/bin`, volumes.bin)
-		.withMountedCache(`${mountPoint}/git/db`, volumes.git.db)
-		.withMountedCache(`${mountPoint}/registry/`, volumes.registry);
+		.withMountedCache(mountPoint, volume);
 };
 
 Container.prototype.withCargoInstall = function(
 	this: Container,
 	crate: string,
-	{ features = [], defaultFeatures = true }: ContainerWithCargoInstallOpts = {},
+	{ features = [], force = true, defaultFeatures = true }: ContainerWithCargoInstallOpts = {},
 ): Container {
 	const installArgs = ['cargo', 'install', crate, '--features', features.join(',')];
-	if (!defaultFeatures) {
-		installArgs.push('--no-default-features');
-	}
+
+	if (!defaultFeatures) { installArgs.push('--no-default-features'); }
+	if (force) { installArgs.push('--force'); }
 
 	return this.withExec(installArgs);
 };

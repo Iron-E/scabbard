@@ -1,18 +1,19 @@
 import type { ContainerWithDirectoryOpts, Directory } from '@dagger.io/dagger';
+import type { Superset } from './util';
 import { Container } from '@dagger.io/dagger';
 
 /** Opts for {@link Container.fromWithDeps} */
-export type ContainerFromWithDepsOpts = Readonly<{
+export type ContainerFromWithDepsOpts = Superset<{
 	/** The command used to install the dependencies. */
-	installCmd?: string[],
+	installCmd: string[],
 }>
 
 /** Opts for {@link Container.fromWithDeps} */
-export type ContainerWithWorkDirectoryOpts = Readonly<
+export type ContainerWithWorkDirectoryOpts = Superset<
 	& ContainerWithDirectoryOpts
 	& {
 		/** The path where the work directory will be copied to */
-		path?: string,
+		path: string,
 	}
 >;
 

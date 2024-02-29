@@ -1,11 +1,11 @@
 import * as fs from 'node:fs';
 import * as readline from 'readline';
-import type { Dict, FieldName, Mut } from './util';
+import type { Dict, FieldName, Mut, Superset } from './util';
 
 /** Options for {@link readIgnoreFile} */
-export type ReadIgnoreFileOpts = Readonly<{
+export type ReadIgnoreFileOpts = Superset<{
 	/** enable reading from the cache, or writing to the cache for this operation */
-	useCache?: boolean,
+	useCache: boolean,
 }>;
 
 const IGNORE_FILE_COMMENT: Readonly<RegExp> = /^\s*[^#]/;
