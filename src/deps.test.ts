@@ -77,16 +77,19 @@ describe(Dependencies, () => {
 
 	it('detects cyclical dependencies', () => {
 		const data = {
-			a: { dependsOn: ['b'], dependedOnBy: ['c'] },
+			a: { dependsOn: ['b'], dependedOnBy: ['d'] },
 			b: { dependsOn: ['c'], dependedOnBy: ['a'] },
-			c: { dependsOn: ['a'], dependedOnBy: ['b'] },
+			c: { dependsOn: ['d'], dependedOnBy: ['b'] },
+			d: { dependsOn: ['a'], dependedOnBy: ['c'] },
 		}
 
 		const deps = new Dependencies();
 		deps.add('a', data.a.dependsOn);
 		deps.add('b', data.b.dependsOn);
+		deps.add('c', data.c.dependsOn);
 
-		console.debug('--------------------');
-		expect(() => deps.add('c', data.c.dependsOn)).to.throw(DependencyCycleError);
+		const before = structuredClone(deps);
+		expect(() => deps.add('d', data.d.dependsOn)).to.throw(DependencyCycleError);
+		expect(deps).to.be.eql(before, 'dependency cycles should be detected before changes are made');
 	});
 });

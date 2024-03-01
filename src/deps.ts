@@ -20,21 +20,36 @@ export class Dependencies {
 
 	/**
 	 * @param name the {@link DepName | name} which has the {@link Dependency | Dependenc}ies.
-	 * @param dependencies the dependencies `name` depends on
+	 * @param dependsOn the dependencies `name` depends on
 	 */
-	public add(this: this, name: DepName, dependencies: readonly DepName[]): void {
-		const dependingOn = this.getOrInit(name);
+	public add(this: this, name: DepName, dependsOn: readonly DepName[]): void {
+		const dep = this.getOrInit(name);
 
-		for (const dependency of dependencies) {
-			const dependedOn = this.getOrInit(dependency);
+		// if this dependency existed before, we must check for compatibility with new dependencies
+		if (!(dep.dependsOn.isEmpty() && dep.dependedOnBy.isEmpty())) {
+			// detecting cycles requires getting transitive dependencies
+			const transitiveDeps = this.get(name, true);
 
-			dependingOn.dependsOn.add(dependency);
-			dependedOn.dependedOnBy.add(name);
+			for (const dependencyName of dependsOn) {
+				// PERF: don't worry about checking compatibility twice
+				if (dep.dependsOn.has(dependencyName)) {
+					continue;
+				}
+
+				const dependency = this.getOrInit(dependencyName);
+				for (const subDependencyName of dependency.dependsOn) {
+					// if a dependency has a subdependency which transitively depends on this, that is a cycle
+					if (transitiveDeps.dependedOnBy.has(subDependencyName)) {
+						throw new DependencyCycleError(name, dependencyName, subDependencyName);
+					}
+				}
+			}
 		}
 
-		const dependingTransitivelyOn = this.get(name, true);
-		if (dependingTransitivelyOn.dependedOnBy.has(name) || dependingTransitivelyOn.dependsOn.has(name)) {
-			throw new DependencyCycleError('foo', name);
+		for (const dependencyName of dependsOn) {
+			dep.dependsOn.add(dependencyName);
+			const dependency = this.getOrInit(dependencyName);
+			dependency.dependedOnBy.add(name);
 		}
 	}
 
@@ -43,7 +58,9 @@ export class Dependencies {
 	 * @param [transitive=false] whether to include transitive dependencies at the top-level
 	 * @returns the existing {@link Dependency}, or a new one if it did not exist.
 	 */
-	public get(this: this, name: DepName, transitive: boolean = false): Dep {
+	public get(this: this, name: DepName, transitive?: boolean): Dep;
+	public get(this: this, name: DepName, transitive: true): Dep<true>;
+	public get(this: this, name: DepName, transitive: boolean = false) {
 		const dep = this.getOrInit(name);
 		if (!transitive) {
 			return dep;
@@ -59,12 +76,18 @@ export class Dependencies {
 	 * @param dep to get the deps of
 	 * @param visited the seen deps. **Modified by this function**
 	 */
-	private getTransitive<K extends keyof Dep>(this: this, dep: Dep, kind: K, visited: Dep<true>[K] = new Set()): Dep<true>[K] {
-		for (const d of dep[kind]) {
-			const hadSeen = visited.has(d);
-			visited.add(d);
+	private getTransitive<K extends keyof Dep>(
+		this: this,
+		dep: Dep,
+		kind: K,
+		visited: Dep<true>[K] = new Set(),
+	): Dep<true>[K] {
+		for (const depName of dep[kind]) {
+			const hadSeen = depName in visited;
+			visited.add(depName);
+
 			if (!hadSeen) { // new dependency, recurse
-				const subDep = this.getOrInit(d);
+				const subDep = this.getOrInit(depName);
 				this.getTransitive(subDep, kind, visited);
 			}
 
@@ -78,7 +101,7 @@ export class Dependencies {
 		* @see {@link getOrInit}
 	*/
 	private getOrInit(this: this, name: DepName): _Dep {
-		let dep = this.deps[name]
+		let dep = this.deps[name];
 		if (dep === undefined) {
 			this.deps[name] = dep = { dependsOn: new Set(), dependedOnBy: new Set() };
 		}

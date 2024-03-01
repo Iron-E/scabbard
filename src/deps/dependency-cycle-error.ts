@@ -2,9 +2,9 @@ import type { DepName } from './dep';
 
 /** The error when the user is not permitted to operate on a resource. */
 export class DependencyCycleError extends Error {
-	constructor(existing: DepName, new_: DepName) {
-		super(`Adding ${new_} to this group of dependencies would cause a cycle because of ${existing}`
-		);
+	constructor(operandDepName: DepName, directDepName: DepName, subDepName: DepName) {
+		super(`Failed to add '${directDepName}' as dependency to '${operandDepName}' because \
+'${directDepName}' depends on '${subDepName}' (which transitively depends on '${operandDepName}')`);
 		Object.setPrototypeOf(this, DependencyCycleError.prototype);
 	}
 }

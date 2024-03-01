@@ -25,5 +25,5 @@ Set.prototype[inspect.custom] = function <T>(this: Set<T>, _depth: number, inspe
 }
 
 Set.prototype.isEmpty = function<T>(this: Set<T>): boolean {
-	return this.size > 0;
+	return this.size < 1;
 }
