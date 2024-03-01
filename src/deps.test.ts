@@ -1,64 +1,55 @@
 import './util/set';
 import type { Struct } from './util';
 import { DependencyCycleError, DependencyTree } from './deps';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, test } from 'vitest';
 
-describe(DependencyTree, () => {
-	type Data = Struct<string, string[]>;
+describe.sequential(DependencyTree, () => {
+	function setup<T extends Struct<string, string[]>>(data: T): [DependencyTree, T] {
+		const deps = new DependencyTree();
+		beforeEach(() => {
+			Object.entries(data).forEach(
+				([k, dependsOn]) => deps.on(dependsOn, k),
+			);
 
-	function populate(data: Data): DependencyTree {
-		return Object.entries(data).reduce(
-			(deps, [k, dependsOn]) => deps.on(dependsOn, k),
-			new DependencyTree(),
-		);
+			return () => deps.clear();
+		});
+
+		return [deps, data];
 	}
 
-	it('gets direct deps', () => {
-		const data = {
+	describe(DependencyTree.prototype.on, () => {
+		const [deps, data] = setup({
 			a: ['b', 'c'],
 			b: ['c'],
 			c: [],
-		}
+		});
 
-		const deps = populate(data);
-		for (const [k, dependsOn] of Object.entries(data)) {
+		test.each(Object.entries(data))('%s depends on %o', (k, dependsOn) => {
 			expect(deps.getOrInit(k)).to.eql(new Set(dependsOn));
-		}
+		});
 	});
 
-	it('detects cyclical deps', () => {
-		const deps = new DependencyTree();
-		deps.on(['b'], 'a')
-			.on(['c'], 'b')
-			.on(['d'], 'c');
-
-		const lexpect = (name: string, message?: string) => expect(() => deps.loadOrder(name), message);
-
-		for (const name of deps.names) {
-			lexpect(name, `load order resolution for "${name}" should work before cycle is introduced`).to.not.throw();
-		}
-
-		deps.on(['a'], 'd');
-		for (const name of deps.names) {
-			lexpect(name).to.throw(DependencyCycleError);
-		}
-	});
-
-	it('resolves load order', () => {
-		const data = {
+	describe(DependencyTree.prototype.loadOrder, () => {
+		const [deps, data] = setup({
 			a: ['b', 'c'],
 			b: ['c', 'd', 'e'],
 			c: ['e', 'd'],
 			d: ['e'],
-		}
+		});
 
-		const deps = populate(data);
-		const gexpect = (k: string) => expect(Array.from(deps.loadOrder(k)));
+		test.each([...Object.keys(data), 'e'])('detects dependency cycles on %s', name => {
+			deps.on(['a'], 'e');
+			expect(() => deps.loadOrder(name)).to.throw(DependencyCycleError);
+		});
 
-		gexpect('a').to.eql(['e', 'd', 'c', 'b', 'a']);
-		gexpect('b').to.eql(['e', 'd', 'c', 'b']);
-		gexpect('c').to.eql(['e', 'd', 'c']);
-		gexpect('d').to.eql(['e', 'd']);
-		gexpect('e').to.eql(['e']);
+		test.each([
+			['a', ['e', 'd', 'c', 'b', 'a']],
+			['b', ['e', 'd', 'c', 'b']],
+			['c', ['e', 'd', 'c']],
+			['d', ['e', 'd']],
+			['e', ['e']],
+		])('suggests loading %s in order %o', (name, order) => {
+			expect(deps.loadOrder(name)).to.eql(new Set(order));
+		});
 	});
 });

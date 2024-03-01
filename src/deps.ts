@@ -12,21 +12,21 @@ type _Dependencies = Dependencies<true>;
 
 /** A system of connected {@link Dependency | Dependenc}ies */
 export class DependencyTree {
-	constructor(private readonly deps: Record<DepName, _Dependencies> = {}) { }
+	constructor(private deps: Record<DepName, _Dependencies> = {}) { }
 
 	/** The names of all dependencies registered */
 	public get names(): string[] {
 		return Object.keys(this.deps);
 	}
 
-	/**
-	 * @param name the {@link DepName | name} of the {@link Dependency} to get.
-	 * @param [transitive=false] whether to include transitive dependencies. When transitive dependencies are included, they are given a valid load order
-	 * @returns the existing {@link Dependency}, or a new one if it did not exist.
-	 */
-	public loadOrder(this: this, name: DepName): _Dependencies {
-		const dep = this.getMutOrInit(name);
-		return this.transitivelyDependsOn(name, dep);
+	/** The number of dependencies */
+	public get size(): number {
+		return this.names.length;
+	}
+
+	/** Removes all dependencies from the tree */
+	public clear(this: this): void {
+		this.deps = {};
 	}
 
 	/**
@@ -47,6 +47,16 @@ export class DependencyTree {
 		}
 
 		return dep;
+	}
+
+	/**
+	 * @param name the {@link DepName | name} of the {@link Dependency} to get.
+	 * @param [transitive=false] whether to include transitive dependencies. When transitive dependencies are included, they are given a valid load order
+	 * @returns the existing {@link Dependency}, or a new one if it did not exist.
+	 */
+	public loadOrder(this: this, name: DepName): _Dependencies {
+		const dep = this.getMutOrInit(name);
+		return this.transitivelyDependsOn(name, dep);
 	}
 
 	/**
