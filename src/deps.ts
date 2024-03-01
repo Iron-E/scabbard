@@ -1,16 +1,10 @@
-import type { RWSet } from "./util";
+import './util/set';
+import type { Dep, DepName } from './deps/dep';
+import { DependencyCycleError } from "./deps/dependency-cycle-error";
 
-/** The name of a {@link Dependency} */
-export type DepName = string;
-
-/** A dep - viewed as both a dependency and a dependent */
-export type Dep<Mutable extends boolean = false> = Readonly<{
-	/** What depends on this */
-	dependsOn: RWSet<DepName, Mutable>,
-
-	/** What this depends on */
-	dependedOnBy: RWSet<DepName, Mutable>,
-}>;
+export type * from './deps/dep';
+export type { Dep, DepName };
+export { DependencyCycleError };
 
 /** Mutable version of {@link Dep} */
 type _Dep = Dep<true>;
@@ -29,13 +23,18 @@ export class Dependencies {
 	 * @param dependencies the dependencies `name` depends on
 	 */
 	public add(this: this, name: DepName, dependencies: readonly DepName[]): void {
-		const dependsOn = this.getOrInit(name);
+		const dependingOn = this.getOrInit(name);
 
 		for (const dependency of dependencies) {
-			dependsOn.dependsOn.add(dependency);
-
 			const dependedOn = this.getOrInit(dependency);
+
+			dependingOn.dependsOn.add(dependency);
 			dependedOn.dependedOnBy.add(name);
+		}
+
+		const dependingTransitivelyOn = this.get(name, true);
+		if (dependingTransitivelyOn.dependedOnBy.has(name) || dependingTransitivelyOn.dependsOn.has(name)) {
+			throw new DependencyCycleError('foo', name);
 		}
 	}
 
@@ -62,12 +61,13 @@ export class Dependencies {
 	 */
 	private getTransitive<K extends keyof Dep>(this: this, dep: Dep, kind: K, visited: Dep<true>[K] = new Set()): Dep<true>[K] {
 		for (const d of dep[kind]) {
-			if (!visited.has(d)) { // new dependency, recurse
+			const hadSeen = visited.has(d);
+			visited.add(d);
+			if (!hadSeen) { // new dependency, recurse
 				const subDep = this.getOrInit(d);
 				this.getTransitive(subDep, kind, visited);
 			}
 
-			visited.add(d);
 		}
 
 		return visited;

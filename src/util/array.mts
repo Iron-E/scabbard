@@ -11,6 +11,13 @@ declare global {
 		 */
 		fromAsync<T>(this: this, arrayLike: AsyncIter<T>): Promise<Array<T>>;
 	}
+
+	interface Array<T> {
+		/**
+		 * @returns `true` if the array has no elements
+		 */
+		isEmpty(this: this): boolean;
+	}
 }
 
 if (!('fromAsync' in Array)) {
@@ -24,4 +31,8 @@ if (!('fromAsync' in Array)) {
 	}
 
 	(Array as ArrayConstructor).fromAsync = fromAsync;
+}
+
+Array.prototype.isEmpty = function<T>(this: T[]): boolean {
+	return this.length > 0;
 }

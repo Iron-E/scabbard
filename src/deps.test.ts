@@ -1,8 +1,8 @@
 import './util/set';
 import type { Struct } from './util';
+import { DependencyCycleError } from './deps/dependency-cycle-error';
 import { describe, expect, it } from 'vitest';
 import { type Dep, Dependencies } from './deps';
-
 
 describe(Dependencies, () => {
 	type Data = Struct<string, Struct<keyof Dep, string[]>>;
@@ -73,5 +73,20 @@ describe(Dependencies, () => {
 		expected = map(data, new Set(['a']), new Set(['c', 'e', 'f']));
 		expect(actual.dependsOn).to.eql(expected.dependsOn);
 		expect(actual.dependedOnBy).to.eql(expected.dependedOnBy);
+	});
+
+	it('detects cyclical dependencies', () => {
+		const data = {
+			a: { dependsOn: ['b'], dependedOnBy: ['c'] },
+			b: { dependsOn: ['c'], dependedOnBy: ['a'] },
+			c: { dependsOn: ['a'], dependedOnBy: ['b'] },
+		}
+
+		const deps = new Dependencies();
+		deps.add('a', data.a.dependsOn);
+		deps.add('b', data.b.dependsOn);
+
+		console.debug('--------------------');
+		expect(() => deps.add('c', data.c.dependsOn)).to.throw(DependencyCycleError);
 	});
 });
