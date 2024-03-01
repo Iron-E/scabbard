@@ -5,37 +5,16 @@ import { describe, expect, it } from 'vitest';
 import { type Dep, Dependencies } from './deps';
 
 describe(Dependencies, () => {
-	type Data = Struct<string, Struct<keyof Dep, string[]>>;
+	type Data<K extends keyof Dep = keyof Dep> = Struct<string, Struct<K, string[]>>;
 
-	function map<T extends Data = Data>(
-		data: T,
-		dependedOnBy: ReadonlySet<keyof T> = new Set(),
-		dependsOn: ReadonlySet<keyof T> = new Set(),
-	): Dep {
-		const entries = Object.entries(data);
-
-		const dependedOnBy_ = entries.filter(([k, _]) => dependedOnBy.has(k));
-		const dependsOn_ = entries.filter(([k, _]) => dependsOn.has(k));
-
-		type Entries = [keyof Dep, typeof dependedOnBy_ | typeof dependsOn_][];
-		const entries_: Entries = [['dependedOnBy', dependedOnBy_], ['dependsOn', dependsOn_]];
-		const depEntries = entries_.map(([kind, deps]) => [kind, new Set(
-			deps.flatMap(([depName, dep]) => [depName, ...dep[kind]]),
-		)]);
-
-		return Object.fromEntries(depEntries);
+	function populate(data: Data<'dependsOn'>): Dependencies {
+		return Object.entries(data).reduce(
+			(deps, [k, { dependsOn }]) => deps.on(dependsOn, k),
+			new Dependencies(),
+		);
 	}
 
-	function populate(data: Data): Dependencies {
-		const deps = new Dependencies();
-		for (const [k, { dependsOn }] of Object.entries(data)) {
-			deps.add(k, dependsOn);
-		}
-
-		return deps;
-	}
-
-	it('gets deps', () => {
+	it('gets direct deps', () => {
 		const data = {
 			a: { dependsOn: ['b', 'c'], dependedOnBy: [] },
 			b: { dependsOn: ['c'], dependedOnBy: ['a'] },
@@ -51,45 +30,52 @@ describe(Dependencies, () => {
 		}
 	});
 
-	it('gets transitive deps', () => {
+	it('detects cyclical deps', () => {
+		const deps = new Dependencies();
+		deps.on(['b'], 'a')
+			.on(['c'], 'b')
+			.on(['d'], 'c');
+
+		const before = structuredClone(deps);
+		expect(() => deps.on(['a'], 'd')).to.throw(DependencyCycleError);
+		expect(deps).to.be.eql(before, 'dependency cycles should be detected before changes are made');
+	});
+
+	it('plans load order', () => {
 		const data = {
-			a: { dependsOn: ['b', 'd'], dependedOnBy: [] },
-			b: { dependsOn: ['c'], dependedOnBy: ['a'] },
-			c: { dependsOn: ['e', 'f'], dependedOnBy: ['b'] },
-			d: { dependsOn: [], dependedOnBy: ['a'] },
-			e: { dependsOn: [], dependedOnBy: ['c'] },
-			f: { dependsOn: [], dependedOnBy: ['c'] },
+			a: { dependsOn: ['b', 'c'] },
+			b: { dependsOn: ['c', 'd', 'e'] },
+			c: { dependsOn: ['e', 'd'] },
+			d: { dependsOn: ['e'] },
 		}
 
 		const deps = populate(data);
-		const get = (k: keyof typeof data) => deps.get(k, true);
+		const get = (k: string) => {
+			const got = deps.get(k, true);
+			return {
+				dependsOn: Array.from(got.dependsOn),
+				dependedOnBy: Array.from(got.dependedOnBy),
+			};
+		};
 
 		let actual = get('a');
-		let expected = map(data, new Set(), new Set(['b', 'c', 'd', 'e', 'f']));
-		expect(actual.dependsOn).to.eql(expected.dependsOn);
-		expect(actual.dependedOnBy).to.eql(expected.dependedOnBy);
+		expect(actual.dependedOnBy).to.eql([]);
+		expect(actual.dependsOn).to.eql(['e', 'd', 'c', 'b']);
 
 		actual = get('b');
-		expected = map(data, new Set(['a']), new Set(['c', 'e', 'f']));
-		expect(actual.dependsOn).to.eql(expected.dependsOn);
-		expect(actual.dependedOnBy).to.eql(expected.dependedOnBy);
-	});
+		expect(actual.dependedOnBy).to.eql(['a']);
+		expect(actual.dependsOn).to.eql(['e', 'd', 'c']);
 
-	it('detects cyclical dependencies', () => {
-		const data = {
-			a: { dependsOn: ['b'], dependedOnBy: ['d'] },
-			b: { dependsOn: ['c'], dependedOnBy: ['a'] },
-			c: { dependsOn: ['d'], dependedOnBy: ['b'] },
-			d: { dependsOn: ['a'], dependedOnBy: ['c'] },
-		}
+		actual = get('c');
+		expect(actual.dependedOnBy).to.eql(['b', 'a']);
+		expect(actual.dependsOn).to.eql(['e', 'd']);
 
-		const deps = new Dependencies();
-		deps.add('a', data.a.dependsOn);
-		deps.add('b', data.b.dependsOn);
-		deps.add('c', data.c.dependsOn);
+		actual = get('d');
+		expect(actual.dependedOnBy).to.eql(['c', 'b', 'a']);
+		expect(actual.dependsOn).to.eql(['e']);
 
-		const before = structuredClone(deps);
-		expect(() => deps.add('d', data.d.dependsOn)).to.throw(DependencyCycleError);
-		expect(deps).to.be.eql(before, 'dependency cycles should be detected before changes are made');
+		actual = get('e');
+		expect(actual.dependedOnBy).to.eql(['d', 'c', 'b', 'a']);
+		expect(actual.dependsOn).to.eql([]);
 	});
 });
