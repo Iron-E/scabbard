@@ -57,7 +57,7 @@ export class DependencyTree {
 	 * @param name the {@link DepName | name} which has the {@link Dependency | Dependenc}ies.
 	 * @param dependsOn the dependencies `name` depends on
 	 * @returns the {@link DependencyTree} object
-	 * @throws {@link DependencyCycleError} if any addition would be invalid
+	 * @throws DependencyCycleError if any addition would be invalid
 	 */
 	public on(this: this, dependsOn: readonly DepName[], name: DepName): this {
 		const dep = this.getOrInit(name);

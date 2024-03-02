@@ -14,7 +14,7 @@ describe(ContextProvider, () => {
 		it.todo('caches ', () => {});
 	});
 
-	describe.todo(ContextProvider.prototype.use, () => {
+	describe.todo(ContextProvider.prototype.request, () => {
 		it.todo('prepares state before injecting', () => {});
 
 		it.todo('injects state', () => {});
