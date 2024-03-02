@@ -1,2 +1,2 @@
 /** The type of a field in typescript. */
-export type FieldName = string | number | symbol;
+export type FieldName = string | number;
