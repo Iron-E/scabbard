@@ -10,5 +10,8 @@ export type * from './mut';
 export type * from './rwset';
 export type * from './struct';
 export type * from './superset';
+export type * from './superset-of';
+export type * from './type-of';
+export type * from './union-keys';
 export type * from './union-of';
 export type * from './value-of';

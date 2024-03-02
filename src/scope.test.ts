@@ -1,26 +1,24 @@
 import type { Struct } from './util';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { Scope, type ProvideWith, type ScopeValueName } from './scope';
 
-type Data<T> = Struct<ScopeValueName, [ScopeValueName[], ProvideWith<T>] | ProvideWith<T>>;
-
-function setup<T>(values: Data<T>): [Scope<T>, Data<T>] {
-	const provider: Scope<T> = new Scope();
-	for (const [name, value] of Object.entries(values)) {
-		if (value instanceof Array) {
-			provider.provide(name, ...value);
-		} else {
-			provider.provide(name, value);
-		}
-	}
-
-	return [provider, values];
-}
-
 describe(Scope, () => {
+	const scope = new Scope<number>();
+
+	beforeEach(() => {
+		scope.provide('a', n => n + 2)
+			.provide('b', ['a'], n => {
+				const a = typeof 'a';
+				const a = scope.inject('a', { Ty: number });
+				return a * n
+			})
+			;
+
+		return () => scope.clear();
+	});
+
 	describe(Scope.prototype.provide, () => {
-		it.todo('stores dependencies', () => {
-		});
+		it.todo('stores dependencies', () => {});
 
 		it.todo('lazily computes output', () => {});
 	});
@@ -31,7 +29,7 @@ describe(Scope, () => {
 		it.todo('caches ', () => {});
 	});
 
-	describe(Scope.prototype.request, () => {
+	describe(Scope.prototype.inject, () => {
 		it.todo('prepares state before injecting', () => {});
 
 		it.todo('injects state', () => {});

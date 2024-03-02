@@ -1,19 +1,22 @@
-import type { Constructor, InstanceOf, UnionOf } from './util';
+import type { Constructor, InstanceOf, SupersetOf, TheTypeOf, TypeOf, UnionOf } from './util';
 import type { ScopeValue, PreparedValue, ProvideWith, ScopeValueName, UnpreparedValue } from './scope/value';
 import { DependencyTree } from './dependencies';
 import { DuplicateValueError } from './scope/duplicate-error';
 import { UnpreparedError } from './scope/unprepared-error';
 
-export type { ScopeValue, PreparedValue, ProvideWith, ScopeValueName , UnpreparedValue };
+export type { ScopeValue, PreparedValue, ProvideWith, ScopeValueName, UnpreparedValue };
 export { UnpreparedError, DuplicateValueError };
 
 /** Options for {@link Scope.inject}. */
 export type UseOpts<T = unknown> = UnionOf<Readonly<{
-	/** A test to see if the value is the type */
-	is: (value: unknown) => value is T,
+	/** The value is instantiated `from` the given class */
+	from: Constructor<T>,
 
-	/** A type which the value is an `instanceof` */
-	Ty: Constructor<T>,
+	/** The value is `T`, `if` this function says so */
+	if: (value: unknown) => value is T,
+
+	/** The value is a basic `typeof` data */
+	of: TypeOf,
 }>>
 
 /**
@@ -28,6 +31,16 @@ export class Scope<Resource = unknown> {
 		private values: Record<ScopeValueName, ScopeValue<Resource>> = {},
 	) { }
 
+	/** The names of all the values in scope */
+	public get names(): string[] {
+		return Object.keys(this.values);
+	}
+
+	/** The number of values in scope */
+	public get size(): number {
+		return this.names.length;
+	}
+
 	/**
 	 * Clears the state of the scope provider.
 	 */
@@ -41,12 +54,12 @@ export class Scope<Resource = unknown> {
 	 * @throws ReferenceError when `name` is not in the `state`
 	 */
 	private indexValues(this: this, name: ScopeValueName): ScopeValue<Resource> {
-		const item = this.values[name];
-		if (item === undefined) {
+		const value = this.values[name];
+		if (value === undefined) {
 			throw new ReferenceError(`Attempted to prepare value ${name} before it was provided`);
 		}
 
-		return item;
+		return value;
 	}
 
 	/**
@@ -56,24 +69,32 @@ export class Scope<Resource = unknown> {
 	 * @throws UnpreparedError if this function is called before {@link Resource} is available
 	 * @throws TypeError if the requested value is not of the specified type
 	 */
-	public inject<T>(this: this, name: ScopeValueName, opts: Exclude<UseOpts<T>, { Ty: any }>): T;
-	public inject<T>(this: this, name: ScopeValueName, opts: Exclude<UseOpts<T>, { is: any }>): InstanceOf<T>;
-	public inject<T>(this: this, name: ScopeValueName, opts: UseOpts<T>) {
-		const item = this.values[name];
-		if (item === undefined || !item.prepared) {
+	public inject<T extends TypeOf>(this: this, name: ScopeValueName, ty: Extract<UseOpts<T>, { if: any }>): TheTypeOf<T>;
+	public inject<T>(this: this, name: ScopeValueName, ty: Extract<UseOpts<T>, { test: any }>): T;
+	public inject<T>(this: this, name: ScopeValueName, ty: Extract<UseOpts<T>, { from: any }>): InstanceOf<T>;
+	public inject<T>(this: this, name: ScopeValueName, ty: UseOpts<T>) {
+		const value = this.values[name];
+		if (value === undefined || !value.prepared) {
 			throw new UnpreparedError(name);
 		}
 
-		if ('is' in opts) {
-			if (opts.is(item.value)) {
-				return item.value;
+		if ('if' in ty) {
+			if (ty.if(value.cached)) {
+				return value.cached;
 			}
-		} else if (item.value instanceof opts.Ty) {
-			return item.value;
+		} else if ('from' in ty) {
+			if (value.cached instanceof ty.from) {
+				return value.cached;
+			}
+		} else {
+			if (typeof value.cached === ty.of) {
+				return value.cached;
+			}
 		}
 
-		throw new TypeError(`Tried to get value ${name} as ${('is' in opts ? opts.is : opts.Ty).name}, \
-but ${item} does not meet that criteria`);
+		const ty_ = ty as SupersetOf<UseOpts<T>>;
+		throw new TypeError(`Tried to get value ${name} as ${(ty_.if ?? ty_.from)?.name ?? ty_.of}, \
+but ${value} does not meet that criteria`);
 	}
 
 	/**
@@ -83,8 +104,8 @@ but ${item} does not meet that criteria`);
 	 * @throws DuplicateValueError if `name` was already defined
 	 * @throws TypeError if `with_` is not given
 	 */
-	public provide(this: this, name: ScopeValueName, with_: (scope: Resource) => unknown): void;
-	public provide(this: this, name: ScopeValueName, dependencies: ScopeValueName[], with_: (scope: Resource) => unknown): void;
+	public provide(this: this, name: ScopeValueName, with_: (scope: Resource) => unknown): this;
+	public provide(this: this, name: ScopeValueName, dependencies: ScopeValueName[], with_: (scope: Resource) => unknown): this;
 	public provide(
 		this: this,
 		name: ScopeValueName,
@@ -105,6 +126,7 @@ but ${item} does not meet that criteria`);
 		}
 
 		this.values[name] = { prepared: false, fn: with_ };
+		return this;
 	}
 
 	/**
@@ -120,13 +142,13 @@ but ${item} does not meet that criteria`);
 
 		const order = this.dependencyTree.loadOrder(name);
 		for (const dependency of order) {
-			const item = this.indexValues(dependency);
-			if (item.prepared) { // has been prepared previously
+			const value = this.indexValues(dependency);
+			if (value.prepared) { // has been prepared previously
 				continue;
 			}
 
-			const value = item.fn(scope);
-			this.values[dependency] = { prepared: true, value };
+			const cached = value.fn(scope);
+			this.values[dependency] = { cached, prepared: true };
 		}
 	}
 }

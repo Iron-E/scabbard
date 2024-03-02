@@ -4,7 +4,7 @@ export type ProvideWith<Scope = unknown, T = unknown> = (scope: Scope) => T;
 
 export type PreparedValue<T = unknown> = {
 	prepared: true,
-	value: T,
+	cached: T,
 };
 
 export type UnpreparedValue<Scope = unknown, T = unknown> = {
