@@ -1,9 +1,8 @@
-import './util/set';
-import type { Struct } from './util';
-import { DependencyCycleError, DependencyTree } from './deps';
-import { beforeEach, describe, expect, it, test } from 'vitest';
+import type { Struct } from '../util';
+import { beforeEach, describe, expect, test } from 'vitest';
+import { DependencyCycleError, DependencyTree } from '.';
 
-describe.sequential(DependencyTree, () => {
+describe(DependencyTree, () => {
 	function setup<T extends Struct<string, string[]>>(data: T): [DependencyTree, T] {
 		const deps = new DependencyTree();
 		beforeEach(() => {

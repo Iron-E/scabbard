@@ -1,11 +1,5 @@
-import './util/set';
-import type { Dependencies, DepName } from './deps/dep';
-import { DependencyCycleError } from "./deps/dependency-cycle-error";
-import { inspect } from 'util';
-
-export type * from './deps/dep';
-export type { Dependencies, DepName };
-export { DependencyCycleError };
+import type { Dependencies, DepName } from './dependency';
+import { DependencyCycleError } from './cycle-error';
 
 /** Mutable version of {@link Dep} */
 type _Dependencies = Dependencies<true>;

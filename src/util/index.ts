@@ -1,9 +1,11 @@
 export * from './array.mjs';
 export * from './set';
 export * from './string.mjs';
+export type * from './constructor';
 export type * from './dict';
 export type * from './entries-of';
 export type * from './field-name';
+export type * from './instance-of';
 export type * from './mut';
 export type * from './rwset';
 export type * from './struct';
