@@ -1,5 +1,5 @@
 import type { Struct } from '../util';
-import { beforeEach, describe, expect, test } from 'vitest';
+import { beforeEach, describe, expect, it, test } from 'vitest';
 import { DependencyCycleError, DependencyTree } from '.';
 
 describe(DependencyTree, () => {
@@ -16,6 +16,16 @@ describe(DependencyTree, () => {
 		return [deps, data];
 	}
 
+	describe(DependencyTree.prototype.get, () => {
+		const [deps, _] = setup({});
+
+		it('does not init dependencies', () => {
+			const key = Math.random().toString();
+			expect(deps.get(key)).to.be.undefined;
+			expect(deps.names).to.be.empty.and.to.have.lengthOf(deps.size);
+		});
+	});
+
 	describe(DependencyTree.prototype.on, () => {
 		const [deps, data] = setup({
 			a: ['b', 'c'],
@@ -23,8 +33,14 @@ describe(DependencyTree, () => {
 			c: [],
 		});
 
-		test.each(Object.entries(data))('%s depends on %o', (k, dependsOn) => {
-			expect(deps.getOrInit(k)).to.eql(new Set(dependsOn));
+		describe('assigns dependencies', () => {
+			test.each(Object.entries(data))('%s on %o', (k, dependsOn) => {
+				expect(deps.get(k)).to.eql(new Set(dependsOn));
+			});
+		});
+
+		it('updates properties', () => {
+			expect(deps.names).to.have.eql(Object.keys(data)).and.have.lengthOf(deps.size);
 		});
 	});
 
@@ -36,19 +52,23 @@ describe(DependencyTree, () => {
 			d: ['e'],
 		});
 
-		test.each([...Object.keys(data), 'e'])('detects dependency cycles on %s', name => {
-			deps.on(['a'], 'e');
-			expect(() => deps.loadOrder(name)).to.throw(DependencyCycleError);
+		describe('detects dependency cycles', () => {
+			test.each(Object.keys(data).concat('e'))('on %s', name => {
+				deps.on(['a'], 'e');
+				expect(() => deps.loadOrder(name)).to.throw(DependencyCycleError);
+			});
 		});
 
-		test.each([
-			['a', ['e', 'd', 'c', 'b', 'a']],
-			['b', ['e', 'd', 'c', 'b']],
-			['c', ['e', 'd', 'c']],
-			['d', ['e', 'd']],
-			['e', ['e']],
-		])('suggests loading %s in order %o', (name, order) => {
-			expect(deps.loadOrder(name)).to.eql(new Set(order));
+		describe('suggests loading in correct order', () => {
+			test.each([
+				['a', ['e', 'd', 'c', 'b', 'a']],
+				['b', ['e', 'd', 'c', 'b']],
+				['c', ['e', 'd', 'c']],
+				['d', ['e', 'd']],
+				['e', ['e']],
+			])('%s with %o', (name, order) => {
+				expect(deps.loadOrder(name)).to.eql(new Set(order));
+			});
 		});
 	});
 });

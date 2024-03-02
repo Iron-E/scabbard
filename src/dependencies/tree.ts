@@ -27,14 +27,14 @@ export class DependencyTree {
 	 * @param name the name of the dependency to get or initialize
 	 * @returns the existing dependency with `name`, if it exists, or a new one of it didn't.
 	 */
-	public getOrInit(this: this, name: DepName): Dependencies {
-		return this.getMutOrInit(name);
+	public get(this: this, name: DepName): Dependencies | undefined {
+		return this.deps[name];
 	}
 
 	/**
-	 * The same as {@link getOrInit} but typed to allow mutation.
+	 * The same as {@link get} but typed to allow mutation.
 	 */
-	private getMutOrInit(this: this, name: DepName): _Dependencies {
+	private getOrInit(this: this, name: DepName): _Dependencies {
 		let dep = this.deps[name];
 		if (dep === undefined) {
 			this.deps[name] = dep = new Set();
@@ -49,7 +49,7 @@ export class DependencyTree {
 	 * @returns the existing {@link Dependency}, or a new one if it did not exist.
 	 */
 	public loadOrder(this: this, name: DepName): _Dependencies {
-		const dep = this.getMutOrInit(name);
+		const dep = this.getOrInit(name);
 		return this.transitivelyDependsOn(name, dep);
 	}
 
@@ -60,7 +60,7 @@ export class DependencyTree {
 	 * @throws {@link DependencyCycleError} if any addition would be invalid
 	 */
 	public on(this: this, dependsOn: readonly DepName[], name: DepName): this {
-		const dep = this.getMutOrInit(name);
+		const dep = this.getOrInit(name);
 		dependsOn.forEach(dep.add, dep);
 		return this;
 	}
@@ -80,7 +80,7 @@ export class DependencyTree {
 	): _Dependencies {
 		ordering.add(name);
 		for (const dependencyName of dependencies) {
-			const dependency = this.getMutOrInit(dependencyName);
+			const dependency = this.getOrInit(dependencyName);
 			if (!loadOrder.has(dependencyName)) { // new dependency, recurse
 				if (ordering.has(dependencyName)) {
 					throw new DependencyCycleError(name, dependencyName);
