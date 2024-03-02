@@ -6,21 +6,21 @@ type _Dependencies = Dependencies<true>;
 
 /** A system of connected {@link Dependency | Dependenc}ies */
 export class DependencyTree {
-	constructor(private deps: Record<DepName, _Dependencies> = {}) { }
+	constructor(private readonly deps: Map<DepName, _Dependencies> = new Map()) { }
 
 	/** The names of all dependencies registered */
-	public get names(): string[] {
-		return Object.keys(this.deps);
+	public get names(): IterableIterator<DepName> {
+		return this.deps.keys();
 	}
 
 	/** The number of dependencies */
 	public get size(): number {
-		return this.names.length;
+		return this.deps.size;
 	}
 
 	/** Removes all dependencies from the tree */
 	public clear(this: this): void {
-		this.deps = {};
+		this.deps.clear();
 	}
 
 	/**
@@ -28,16 +28,16 @@ export class DependencyTree {
 	 * @returns the existing dependency with `name`, if it exists, or a new one of it didn't.
 	 */
 	public get(this: this, name: DepName): Dependencies | undefined {
-		return this.deps[name];
+		return this.deps.get(name);
 	}
 
 	/**
 	 * The same as {@link get} but typed to allow mutation.
 	 */
 	private getOrInit(this: this, name: DepName): _Dependencies {
-		let dep = this.deps[name];
+		let dep = this.deps.get(name);
 		if (dep === undefined) {
-			this.deps[name] = dep = new Set();
+			this.deps.set(name, dep = new Set());
 		}
 
 		return dep;

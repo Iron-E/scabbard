@@ -22,7 +22,7 @@ describe(DependencyTree, () => {
 		it('does not init dependencies', () => {
 			const key = Math.random().toString();
 			expect(deps.get(key)).to.be.undefined;
-			expect(deps.names).to.be.empty.and.to.have.lengthOf(deps.size);
+			expect(Array.from(deps.names)).to.be.empty.and.to.have.lengthOf(deps.size);
 		});
 	});
 
@@ -40,7 +40,7 @@ describe(DependencyTree, () => {
 		});
 
 		it('updates properties', () => {
-			expect(deps.names).to.have.eql(Object.keys(data)).and.have.lengthOf(deps.size);
+			expect(Array.from(deps.names)).to.have.eql(Object.keys(data)).and.have.lengthOf(deps.size);
 		});
 	});
 
