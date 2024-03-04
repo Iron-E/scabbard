@@ -8,8 +8,7 @@ describe(Scope, () => {
 	beforeEach(() => {
 		scope.provide('a', n => n + 2)
 			.provide('b', ['a'], n => {
-				const a = typeof 'a';
-				const a = scope.inject('a', { Ty: number });
+				const a = scope.inject('a', 'number');
 				return a * n
 			})
 			;
