@@ -1,6 +1,7 @@
-import type { TheTypeOf, TypeOf } from '../util';
+import type { EntriesOf, TheTypeOf, TypeOf } from '../util';
 import { describe, expect, it, test } from 'vitest';
 import { Injection, TypeInjectError } from './injection';
+import { randomBigInt, randomBoolean, randomString, randomSymbol } from '../util/rand.test';
 
 describe(Injection, () => {
 	describe(Injection.prototype.check, () => {
@@ -41,44 +42,31 @@ describe(Injection, () => {
 
 	});
 
+	const tests: EntriesOf<{ [key in TypeOf]: [TheTypeOf<key>, Exclude<TheTypeOf, TheTypeOf<key>>]; }>[] = [
+		// @ts-ignore
+		['bigint', [randomBigInt(), Math.random()]],
+		['boolean', [randomBoolean(), Math.random()]],
+		['function', [() => {}, Math.random()]],
+		['number', [Math.random(), randomString()]],
+		['object', [{}, Math.random()]],
+		['string', [randomString(), Math.random()]],
+		['symbol', [randomSymbol(), Math.random()]],
+		['undefined', [undefined, Math.random()]],
+	];
+
 	describe('getters', () => {
-		describe('narrows', () => {
-			const tests: { [key in TypeOf]: TheTypeOf<key>; } = {
-				// @ts-ignore
-				bigint: 3n,
-				boolean: Math.random() <= 0.5,
-				function: () => {},
-				number: Math.random(),
-				object: {},
-				string: Math.random().toString(),
-				symbol: Symbol('for testing symbol support'),
-				undefined: undefined,
-			};
-
-			const each = Object.entries(tests) as [keyof typeof tests, unknown][];
-			test.each(each)('`%s` given "%o"', (t, val) => {
-				const injection = new Injection(val);
-				expect(injection[t]).to.be.a(t).that.equals(val).and.equals(injection.value);
+		describe.each(tests)('%s', (ty, [work, fail]) => {
+			test(`"narrows ${String(work)} to ${ty}"`, () => {
+				const injection = new Injection(work);
+				expect(injection[ty])
+				.to.be.a(ty).that.eqls(work)
+				.to.eql(injection.value)
+				;
 			});
-		});
 
-		describe('throws', () => {
-			const tests: { [key in TypeOf]: Exclude<TheTypeOf, TheTypeOf<key>>; } = {
-				// @ts-ignore
-				bigint: Math.random(),
-				boolean: Math.random(),
-				function: Math.random(),
-				number: Math.random.toString(),
-				object: Math.random(),
-				string: Math.random(),
-				symbol: Math.random(),
-				undefined: Math.random(),
-			};
-
-			const each = Object.entries(tests) as [keyof typeof tests, unknown][];
-			test.each(each)('`%s` given "%o"', (t, val) => {
-				const injection = new Injection(val);
-				expect(() => injection[t]).to.throw(TypeInjectError);
+			test(`"throws given ${String(fail)}"`, () => {
+				const injection = new Injection(fail);
+				expect(() => injection[ty]).to.throw(TypeInjectError);
 			});
 		});
 	});

@@ -1,5 +1,3 @@
-import type { InjectionName } from './name';
-
 /** The error when the user is not permitted to operate on a resource. */
 export class TypeInjectError extends TypeError {
 	public constructor(as: string, value: unknown) {
