@@ -25,20 +25,20 @@ export type UseOpts<T = unknown> = UnionOf<Readonly<{
 export class Scope<Resource = unknown> {
 	constructor(
 		/** The dependencies between {@link values} */
-		private dependencyTree: DependencyTree = new DependencyTree(),
+		private readonly dependencyTree: DependencyTree = new DependencyTree(),
 
 		/** That which can be {@link inject}ed by the scope */
-		private values: Record<ScopeValueName, ScopeValue<Resource>> = {},
+		private readonly values: Map<ScopeValueName, ScopeValue<Resource>> = new Map(),
 	) { }
 
 	/** The names of all the values in scope */
-	public get names(): string[] {
-		return Object.keys(this.values);
+	public get names(): IterableIterator<ScopeValueName> {
+		return this.values.keys();
 	}
 
 	/** The number of values in scope */
 	public get size(): number {
-		return this.names.length;
+		return this.values.size;
 	}
 
 	/**
@@ -46,7 +46,7 @@ export class Scope<Resource = unknown> {
 	 */
 	public clear(this: this): void {
 		this.dependencyTree.clear();
-		this.values = {};
+		this.values.clear();
 	}
 
 	/**
@@ -54,7 +54,7 @@ export class Scope<Resource = unknown> {
 	 * @throws ReferenceError when `name` is not in the `state`
 	 */
 	private indexValues(this: this, name: ScopeValueName): ScopeValue<Resource> {
-		const value = this.values[name];
+		const value = this.values.get(name);
 		if (value === undefined) {
 			throw new ReferenceError(`Attempted to prepare value ${name} before it was provided`);
 		}
@@ -73,7 +73,7 @@ export class Scope<Resource = unknown> {
 	public inject<T>(this: this, name: ScopeValueName, ty: Extract<UseOpts<T>, { test: any }>): T;
 	public inject<T>(this: this, name: ScopeValueName, ty: Extract<UseOpts<T>, { from: any }>): InstanceOf<T>;
 	public inject<T>(this: this, name: ScopeValueName, ty: UseOpts<T>) {
-		const value = this.values[name];
+		const value = this.values.get(name);
 		if (value === undefined || !value.prepared) {
 			throw new UnpreparedError(name);
 		}
@@ -125,7 +125,7 @@ but ${value} does not meet that criteria`);
 			}
 		}
 
-		this.values[name] = { prepared: false, fn: with_ };
+		this.values.set(name, { prepared: false, fn: with_ });
 		return this;
 	}
 
@@ -148,7 +148,7 @@ but ${value} does not meet that criteria`);
 			}
 
 			const cached = value.fn(scope);
-			this.values[dependency] = { cached, prepared: true };
+			this.values.set(dependency, { cached, prepared: true });
 		}
 	}
 }
