@@ -6,7 +6,7 @@ export type { InjectionName };
 export { TypeInjectError };
 
 export class Injection {
-	public constructor(public readonly name: InjectionName, public readonly value: unknown) { }
+	public constructor(public readonly value: unknown) { }
 
 	/**
 	 * @returns {@link value} as a `bigint`
@@ -67,7 +67,7 @@ export class Injection {
 			return this.value;
 		}
 
-		throw new TypeInjectError(this.name, checkFn.name, this.value);
+		throw new TypeInjectError(checkFn.name, this.value);
 	}
 
 	/**
@@ -81,7 +81,7 @@ export class Injection {
 			return this.value;
 		}
 
-		throw new TypeInjectError(this.name, of.name, this.value);
+		throw new TypeInjectError(of.name, this.value);
 	}
 
 	/**
@@ -95,6 +95,6 @@ export class Injection {
 			return this.value as TheTypeOf<T>;
 		}
 
-		throw new TypeInjectError(this.name, of, this.value);
+		throw new TypeInjectError(of, this.value);
 	}
 }

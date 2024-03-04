@@ -107,7 +107,7 @@ export class Scope<Resource = unknown> {
 		(name: InjectionName) => Injection {
 		return (name: InjectionName) => {
 			const value = this.indexPreparedValues(name);
-			return new Injection(name, value.cached);
+			return new Injection(value.cached);
 		};
 	}
 

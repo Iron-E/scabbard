@@ -3,7 +3,7 @@ const __ty = typeof 'a';
 /** The potential results of `typeof` */
 export type TypeOf = typeof __ty;
 
-export type TheTypeOf<T extends TypeOf> =
+export type TheTypeOf<T extends TypeOf = TypeOf> =
 	T extends 'bigint' ? bigint :
 	T extends 'boolean' ? boolean :
 	T extends 'function' ? Function :
