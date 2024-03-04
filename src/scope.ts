@@ -51,7 +51,7 @@ export class Scope<Resource = unknown> {
 		asOrDependencies: InjectionName[] | ProvideWith<Resource>,
 		as_?: ProvideWith<Resource>,
 	) {
-		if (name in this.values) {
+		if (this.values.has(name)) {
 			throw new DuplicateValueError(name);
 		}
 
@@ -118,7 +118,7 @@ export class Scope<Resource = unknown> {
 	 * @see {@link declare}
 	 */
 	public prepare(this: this, name: InjectionName, resource: Resource): void {
-		if (this.indexValues(name)) {
+		if (this.indexValues(name).prepared) {
 			return; // has been prepared previously
 		}
 
