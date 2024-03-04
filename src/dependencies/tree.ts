@@ -6,7 +6,7 @@ type _Dependencies = Dependencies<true>;
 
 /** A system of connected {@link Dependency | Dependenc}ies */
 export class DependencyTree {
-	constructor(private readonly deps: Map<DepName, _Dependencies> = new Map()) { }
+	public constructor(private readonly deps: Map<DepName, _Dependencies> = new Map()) { }
 
 	/** The names of all dependencies registered */
 	public get names(): IterableIterator<DepName> {
@@ -57,7 +57,7 @@ export class DependencyTree {
 	 * @param name the {@link DepName | name} which has the {@link Dependency | Dependenc}ies.
 	 * @param dependsOn the dependencies `name` depends on
 	 * @returns the {@link DependencyTree} object
-	 * @throws DependencyCycleError if any addition would be invalid
+	 * @throws {@link DependencyCycleError} if any addition would be invalid
 	 */
 	public on(this: this, dependsOn: readonly DepName[], name: DepName): this {
 		const dep = this.getOrInit(name);

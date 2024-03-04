@@ -1,36 +1,26 @@
-import type { Constructor, InstanceOf, TheTypeOf, TypeOf } from './util';
-import type { ScopeValue, PreparedValue, ProvideWith, ScopeValueName, UnpreparedValue } from './scope/value';
+import type { ScopeValue, PreparedValue, ProvideWith, UnpreparedValue } from './scope/value';
 import { DependencyTree } from './dependencies';
 import { DuplicateValueError } from './scope/duplicate-error';
-import { TypeInjectError } from './scope/type-inject-error';
+import { Injection, TypeInjectError, type InjectionName } from './scope/injection';
 import { UnpreparedError } from './scope/unprepared-error';
 
-export type { ScopeValue, PreparedValue, ProvideWith, ScopeValueName, UnpreparedValue };
-export { DuplicateValueError, TypeInjectError, UnpreparedError };
-
-/** Options for {@link Scope.inject}. */
-export type UseOpts<T = unknown> = Readonly<{
-	/** The value is `T`, `if` this function says so */
-	check: (value: unknown) => value is T,
-
-	/** The value is an instance `of` the given class */
-	of: Constructor<T>,
-}>;
+export type { InjectionName, PreparedValue, ProvideWith, ScopeValue, UnpreparedValue };
+export { DuplicateValueError, Injection, TypeInjectError, UnpreparedError };
 
 /**
- * A mechanism to {@link define | provide} in terms of a {@link Resource}, so that once it becomes available the values can be {@link inject}ed into lexical scopes.
+ * A mechanism to {@link declare | provide} in terms of a {@link Resource}, so that once it becomes available the values can be {@link inject}ed into lexical scopes.
  */
 export class Scope<Resource = unknown> {
-	constructor(
+	public constructor(
 		/** The dependencies between {@link values} */
 		private readonly dependencyTree: DependencyTree = new DependencyTree(),
 
 		/** That which can be {@link inject}ed by the scope */
-		private readonly values: Map<ScopeValueName, ScopeValue<Resource>> = new Map(),
+		private readonly values: Map<InjectionName, ScopeValue<Resource>> = new Map(),
 	) { }
 
 	/** The names of all the values in scope */
-	public get names(): IterableIterator<ScopeValueName> {
+	public get names(): IterableIterator<InjectionName> {
 		return this.values.keys();
 	}
 
@@ -39,28 +29,26 @@ export class Scope<Resource = unknown> {
 		return this.values.size;
 	}
 
-	/**
-	 * Clears the state of the scope provider.
-	 */
+	/** Clears the state of the scope provider. */
 	public clear(this: this): void {
 		this.dependencyTree.clear();
 		this.values.clear();
 	}
 
 	/**
-	 * Define what value will be given to `name` when the {@link Resource} is {@link prepareWith | provided}.
+	 * Define what value will be given to `name` when the {@link Resource} is {@link prepare | provided}.
 	 * @param name of the value
-	 * @param dependencies what other declarations must be {@link prepareWith | prepared} before this
+	 * @param dependencies what other declarations must be {@link prepare | prepared} before this
 	 * @param as_ how to define the value
-	 * @throws DuplicateValueError if `name` was already defined
-	 * @throws TypeError if `with_` is not given
+	 * @throws {@link DuplicateValueError} if `name` was already defined
+	 * @throws {@link TypeError} if `as_` is not given
 	 */
-	public define(this: this, name: ScopeValueName, as_: (resource: Resource) => unknown): this;
-	public define(this: this, name: ScopeValueName, dependencies: ScopeValueName[], as_: (resource: Resource) => unknown): this;
-	public define(
+	public declare(this: this, name: InjectionName, as_: (resource: Resource) => unknown): this;
+	public declare(this: this, name: InjectionName, dependencies: InjectionName[], as_: (resource: Resource) => unknown): this;
+	public declare(
 		this: this,
-		name: ScopeValueName,
-		asOrDependencies: ScopeValueName[] | ProvideWith<Resource>,
+		name: InjectionName,
+		asOrDependencies: InjectionName[] | ProvideWith<Resource>,
 		as_?: ProvideWith<Resource>,
 	) {
 		if (name in this.values) {
@@ -83,10 +71,10 @@ export class Scope<Resource = unknown> {
 	/**
 	 * @param name of the prepared value to get
 	 * @returns the prepared value
-	 * @throws ReferenceError if the `name` was not {@link defined}
-	 * @throws UnpreparedError if `name` was not prepared
+	 * @throws {@link ReferenceError} if the `name` was not {@link defined}
+	 * @throws {@link UnpreparedError} if `name` was not prepared
 	 */
-	private indexPreparedValues(this: this, name: ScopeValueName): PreparedValue {
+	private indexPreparedValues(this: this, name: InjectionName): PreparedValue {
 		const value = this.indexValues(name);
 		if (value === undefined || !value.prepared) {
 			throw new UnpreparedError(name);
@@ -97,9 +85,9 @@ export class Scope<Resource = unknown> {
 
 	/**
 	 * @param name the name of the value
-	 * @throws ReferenceError when `name` is not in the `state`
+	 * @throws {@link ReferenceError} when `name` is not in the `state`
 	 */
-	private indexValues(this: this, name: ScopeValueName): ScopeValue<Resource> {
+	private indexValues(this: this, name: InjectionName): ScopeValue<Resource> {
 		const value = this.values.get(name);
 		if (value === undefined) {
 			throw new ReferenceError(`Attempted to prepare value ${name} before it was provided`);
@@ -108,76 +96,28 @@ export class Scope<Resource = unknown> {
 		return value;
 	}
 
-	/**
-	 * @param name of the value to inject
-	 * @param check the typecheck to assert
-	 * @returns the value associated with `name`, given the type desired
-	 * @throws ReferenceError if the `name` was not {@link defined}
-	 * @throws TypeInjectError if the value is not of the type described
-	 * @throws UnpreparedError if the value is not ready to be used
-	 */
-	public inject<T>(this: this, name: ScopeValueName, check: (value: unknown) => value is T): T {
-		const value = this.indexPreparedValues(name);
-		if (check(value.cached)) {
-			return value.cached;
-		}
-
-		throw new TypeInjectError(name, check.name, value);
-	}
-
-	/**
-	 * @param name of the value to inject
-	 * @param of the class which the value is an `instanceof`
-	 * @returns the value associated with `name`, given the type desired
-	 * @throws ReferenceError if the `name` was not {@link defined}
-	 * @throws TypeInjectError if the value is not of the type described
-	 * @throws UnpreparedError if the value is not ready to be used
-	 */
-	public injectInstance<T>(this: this, name: ScopeValueName, of: Constructor<T>): InstanceOf<T> {
-		const value = this.indexPreparedValues(name);
-		if (value.cached instanceof of) {
-			return value.cached;
-		}
-
-		throw new TypeInjectError(name, of.name, value);
-	}
-
-	/**
-	 * @param name of the value to inject
-	 * @param of the `typeof` the value
-	 * @returns the value associated with `name`, given the type desired
-	 * @throws ReferenceError if the `name` was not {@link defined}
-	 * @throws TypeInjectError if the value is not of the type described
-	 * @throws UnpreparedError if the value is not ready to be used
-	 */
-	public injectType<T extends TypeOf>(this: this, name: ScopeValueName, of: T): TheTypeOf<T> {
-		const value = this.indexPreparedValues(name);
-		if (typeof value.cached === of) {
-			return value.cached as TheTypeOf<T>;
-		}
-
-		throw new TypeInjectError(name, of, value);
-	}
-
-	/**
-	 * @param resource to {@link prepareWith}
-	 * @returns injectors which will use the resource to lazily prepare values as they are requested
-	 */
-	public prepareInjectors(this: this, resource: Resource): Pick<Scope<Resource>, 'inject' | 'injectInstance' | 'injectType'> {
-		return {
-			inject: this.prepareWrap(resource, this.inject, this),
-			injectInstance: this.prepareWrap(resource, this.injectInstance, this),
-			injectType: this.prepareWrap(resource, this.injectType, this),
+	/** @returns a callable which will get inject values from this {@link Scope} into the lexical scope */
+	public injector(this: this):
+		/**
+		 * @param name of the value to get
+		 * @returns the value in {@link Scope}
+		 * @throws {@link ReferenceError} if the `name` was not {@link defined}
+		 * @throws {@link UnpreparedError} if `name` was not prepared
+		 */
+		(name: InjectionName) => Injection {
+		return (name: InjectionName) => {
+			const value = this.indexPreparedValues(name);
+			return new Injection(name, value.cached);
 		};
 	}
 
 	/**
 	 * @param name the value to prepare
 	 * @param resource the resource to provide the scope
-	 * @throws ReferenceError when `name` (or one of its dependencies) was not {@link define}d
-	 * @see {@link define}
+	 * @throws {@link ReferenceError} when `name` (or one of its dependencies) was not {@link declare}d
+	 * @see {@link declare}
 	 */
-	public prepareWith(this: this, name: ScopeValueName, resource: Resource): void {
+	public prepare(this: this, name: InjectionName, resource: Resource): void {
 		if (this.indexValues(name)) {
 			return; // has been prepared previously
 		}
@@ -191,27 +131,6 @@ export class Scope<Resource = unknown> {
 
 			const cached = value.fn(resource);
 			this.values.set(dependency, { cached, prepared: true });
-		}
-	}
-
-	/**
-	 * @param resource the resource to {@link prepareWith}
-	 * @param fn to wrap
-	 * @returns a function which will ensure all scope values used will be prepared before use
-	 */
-	public prepareWrap<Args extends unknown[], Ret extends unknown, Fn extends (name: ScopeValueName, ...args: Args) => Ret>(
-		this: this,
-		resource: Resource,
-		fn: Fn,
-		thisArg?: unknown,
-	): (name: ScopeValueName, ...args: Args) => Ret {
-		return (name, ...args) => {
-			this.prepareWith(name, resource);
-			if (thisArg == undefined) {
-				return fn(name, ...args);
-			}
-
-			return fn.call(thisArg, name, ...args);
 		}
 	}
 }

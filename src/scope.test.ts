@@ -1,36 +1,26 @@
-import type { Struct } from './util';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { Scope, type ProvideWith, type ScopeValueName } from './scope';
+import { Scope } from './scope';
 
 describe(Scope, () => {
 	const scope = new Scope<number>();
+	const inject = scope.injector();
 
 	beforeEach(() => {
-		scope.provide('a', n => n + 2)
-			.provide('b', ['a'], n => {
-				const a = scope.inject('a', 'number');
-				return a * n
-			})
+		scope
+			.declare('a', x => x + 2)
+			.declare('b', ['a'], x => inject('a').type('number') * x)
+			.declare('c', ['a', 'b'], _ => new Map().set('a', inject('a').number).set('b', inject('b').number))
 			;
 
 		return () => scope.clear();
 	});
 
-	describe(Scope.prototype.provide, () => {
-		it.todo('stores dependencies', () => {});
-
-		it.todo('lazily computes output', () => {});
+	describe(Scope.prototype.declare, () => {
 	});
 
-	describe(Scope.prototype.prepareWith, () => {
-		it.todo('loads dependencies', () => {});
-
-		it.todo('caches ', () => {});
+	describe(Scope.prototype.prepare, () => {
 	});
 
-	describe(Scope.prototype.inject, () => {
-		it.todo('prepares state before injecting', () => {});
-
-		it.todo('injects state', () => {});
+	describe(Scope.prototype.injector, () => {
 	});
 });

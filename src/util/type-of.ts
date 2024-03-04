@@ -6,6 +6,7 @@ export type TypeOf = typeof __ty;
 export type TheTypeOf<T extends TypeOf> =
 	T extends 'bigint' ? bigint :
 	T extends 'boolean' ? boolean :
+	T extends 'function' ? Function :
 	T extends 'number' ? number :
 	T extends 'object' ? object :
 	T extends 'string' ? string :
