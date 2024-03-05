@@ -1,8 +1,6 @@
 import type { Constructor, InstanceOf, TheTypeOf, TypeOf } from '../util';
-import type { InjectionName } from './injection/name';
 import { TypeInjectError } from './injection/type-inject-error';
 
-export type { InjectionName };
 export { TypeInjectError };
 
 export class Injection {

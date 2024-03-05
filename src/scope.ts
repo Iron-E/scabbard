@@ -1,10 +1,10 @@
-import type { ScopeValue, PreparedValue, ProvideWith, UnpreparedValue } from './scope/value';
-import { DependencyTree } from './dependencies';
+import type { ScopeValueName, ScopeValue, PreparedValue, ProvideWith, UnpreparedValue } from './scope/value';
 import { DuplicateValueError } from './scope/duplicate-error';
-import { Injection, TypeInjectError, type InjectionName } from './scope/injection';
+import { Injection, TypeInjectError } from './scope/injection';
+import { DependencyTree } from './dependencies';
 import { UnpreparedError } from './scope/unprepared-error';
 
-export type { InjectionName, PreparedValue, ProvideWith, ScopeValue, UnpreparedValue };
+export type { PreparedValue, ProvideWith, ScopeValue, ScopeValueName, UnpreparedValue };
 export { DuplicateValueError, Injection, TypeInjectError, UnpreparedError };
 
 type ScopeExport<Resource> = {
@@ -17,9 +17,9 @@ type ScopeExport<Resource> = {
 	 * @throws {@link TypeError} if `as_` is not given
 	 */
 	declare:
-		& ((name: InjectionName, as_: (resource: Resource) => unknown) => void)
-		& ((name: InjectionName, dependencies: InjectionName[], as_: (resource: Resource) => unknown) => void)
-		,
+	& ((name: ScopeValueName, as_: (resource: Resource) => unknown) => void)
+	& ((name: ScopeValueName, dependencies: ScopeValueName[], as_: (resource: Resource) => unknown) => void)
+	,
 
 	/**
 	 * Put a value from this scope into the lexical scope
@@ -28,7 +28,7 @@ type ScopeExport<Resource> = {
 	 * @throws {@link ReferenceError} if the `name` was not {@link defined}
 	 * @throws {@link UnpreparedError} if `name` was not prepared
 	 */
-	inject: (name: InjectionName) => Injection,
+	inject: (name: ScopeValueName) => Injection,
 };
 
 /**
@@ -40,11 +40,11 @@ export class Scope<Resource = unknown> {
 		private readonly dependencyTree: DependencyTree = new DependencyTree(),
 
 		/** That which can be {@link inject}ed by the scope */
-		private readonly values: Map<InjectionName, ScopeValue<Resource>> = new Map(),
+		private readonly values: Map<ScopeValueName, ScopeValue<Resource>> = new Map(),
 	) { }
 
 	/** The names of all the values in scope */
-	public get names(): IterableIterator<InjectionName> {
+	public get names(): IterableIterator<ScopeValueName> {
 		return this.values.keys();
 	}
 
@@ -63,7 +63,7 @@ export class Scope<Resource = unknown> {
 	 * @returns functions which can be used to declare scope values and inject scope values into lexical scope
 	 */
 	public export(): ScopeExport<Resource> {
-		const declare = (name: InjectionName, asOrDependencies: InjectionName[] | ProvideWith<Resource>, as_?: ProvideWith<Resource>) => {
+		const declare = (name: ScopeValueName, asOrDependencies: ScopeValueName[] | ProvideWith<Resource>, as_?: ProvideWith<Resource>) => {
 			if (this.values.has(name)) {
 				throw new DuplicateValueError(name);
 			}
@@ -81,7 +81,7 @@ export class Scope<Resource = unknown> {
 			return this;
 		}
 
-		const inject = (name: InjectionName) => {
+		const inject = (name: ScopeValueName) => {
 			const value = this.indexPreparedValues(name);
 			return new Injection(value.cached);
 		};
@@ -95,7 +95,7 @@ export class Scope<Resource = unknown> {
 	 * @throws {@link ReferenceError} if the `name` was not {@link defined}
 	 * @throws {@link UnpreparedError} if `name` was not prepared
 	 */
-	private indexPreparedValues(this: this, name: InjectionName): PreparedValue {
+	private indexPreparedValues(this: this, name: ScopeValueName): PreparedValue {
 		const value = this.indexValues(name);
 		if (value === undefined || !value.prepared) {
 			throw new UnpreparedError(name);
@@ -108,7 +108,7 @@ export class Scope<Resource = unknown> {
 	 * @param name the name of the value
 	 * @throws {@link ReferenceError} when `name` is not in the `state`
 	 */
-	private indexValues(this: this, name: InjectionName): ScopeValue<Resource> {
+	private indexValues(this: this, name: ScopeValueName): ScopeValue<Resource> {
 		const value = this.values.get(name);
 		if (value === undefined) {
 			throw new ReferenceError(`Attempted to prepare value ${name} before it was provided`);
@@ -118,17 +118,15 @@ export class Scope<Resource = unknown> {
 	}
 
 	/**
-	 * @param name the value to prepare
-	 * @param resource the resource to provide the scope
-	 * @throws {@link ReferenceError} when `name` (or one of its dependencies) was not {@link declare}d
-	 * @see {@link declare}
+	 * @param resource to prepare the values with
+	 * @param name the value to prepare. If `undefined`, prepare all values
 	 */
-	public prepare(this: this, name: InjectionName, resource: Resource): void {
-		if (this.indexValues(name).prepared) {
-			return; // has been prepared previously
-		}
+	private _prepare(resource: Resource, name?: ScopeValueName): void {
+		const order = name === undefined
+			? this.dependencyTree.loadAllOrder()
+			: this.dependencyTree.loadOrder(name)
+			;
 
-		const order = this.dependencyTree.loadOrder(name);
 		for (const dependency of order) {
 			const value = this.indexValues(dependency);
 			if (value.prepared) { // has been prepared previously
@@ -141,9 +139,23 @@ export class Scope<Resource = unknown> {
 	}
 
 	/**
+	 * @param name the value to prepare
+	 * @param resource the resource to provide the scope
+	 * @throws {@link ReferenceError} when `name` (or one of its dependencies) was not {@link declare}d
+	 * @see {@link declare}
+	 */
+	public prepare(this: this, name: ScopeValueName, resource: Resource): void {
+		if (this.indexValues(name).prepared) {
+			return; // has been prepared previously
+		}
+
+		this._prepare(resource, name);
+	}
+
+	/**
 	 * {@link prepare} all of the values in scope for {@link inject}ion
 	 */
 	public prepareAll(this: this, resource: Resource): void {
-
+		this._prepare(resource);
 	}
 }

@@ -56,6 +56,18 @@ describe(Scope, () => {
 		});
 	});
 
+	describe(Scope.prototype.prepareAll, () => {
+		const [scope, _] = setup();
+		beforeEach(() => scope.prepareAll(Math.random()));
+
+		test.each(names.toReversed())('has prepared %#', name => {
+			const value = scope['values'].get(name);
+			expect(value).does.not.have.property('fn');
+			expect(value).has.property('cached');
+			expect(value).has.property('prepared').that.is.true;
+		});
+	});
+
 	describe.each(names.toReversed())(`inject %s`, name => {
 		const [scope, { inject }] = setup();
 
@@ -66,22 +78,8 @@ describe(Scope, () => {
 		it('succeeds when prepared', () => {
 			scope.prepare(name, Math.random());
 			const injection = inject(name);
-
-			let value: unknown;
-			let ty: TypeOf;
-			switch (name) {
-				case c:
-					value = injection.string;
-					ty = 'string';
-					break;
-
-				default:
-					value = injection.number;
-					ty = 'number';
-					break;
-			}
-
-			expect(value).to.be.a(ty);
+			const ty = name === c ? 'string' : 'number';
+			expect(injection).to.have.property(ty).that.is.a(ty);
 		});
 	});
 });
