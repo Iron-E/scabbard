@@ -41,7 +41,7 @@ export class Injection<Required extends boolean = true> {
 	 * @returns the value associated with `name`, given the type desired
 	 * @throws {@link TypeInjectError} if the value is not of the type described
 	 */
-	check<T>(this: this, checkFn: (value: unknown) => value is T): InjectValue<Required, T> {
+	public check = <T>(checkFn: (value: unknown) => value is T): InjectValue<Required, T> => {
 		if (checkFn(this.value)) {
 			return this.value;
 		} else if (this.valueIsOptionalAndUndefined) {
@@ -57,7 +57,7 @@ export class Injection<Required extends boolean = true> {
 	 * @returns the value associated with `name`, given the type desired
 	 * @throws {@link TypeInjectError} if the value is not of the type described
 	 */
-	instance<T>(this: this, of: Constructor<T>): InjectValue<Required, InstanceOf<T>> {
+	public readonly instance = <T>(of: Constructor<T>): InjectValue<Required, InstanceOf<T>> => {
 		if (this.value instanceof of) {
 			return this.value;
 		} else if (this.valueIsOptionalAndUndefined) {
@@ -73,7 +73,7 @@ export class Injection<Required extends boolean = true> {
 	 * @returns the value associated with `name`, given the type desired
 	 * @throws {@link TypeInjectError} if the value is not of the type described
 	 */
-	type<T extends TypeOf>(this: this, of: T): InjectValue<Required, TheTypeOf<T>> {
+	public readonly type = <T extends TypeOf>( of: T): InjectValue<Required, TheTypeOf<T>> => {
 		if (typeof this.value === of) {
 			return this.value as TheTypeOf<T>;
 		} else if (this.valueIsOptionalAndUndefined) {

@@ -6,30 +6,6 @@ import { UnpreparedError } from './scope/unprepared-error';
 export type { InjectFn, PreparedValue, ScopeValue, ScopeValueName, UnpreparedValue };
 export { Injection, TypeInjectError, UnpreparedError };
 
-type ScopeExport<Resource> = {
-	/**
-	 * Define what value will be given to `name` when the {@link Resource} is {@link prepare | provided}.
-	 * @param name of the value
-	 * @param as how to define the value
-	 * @returns `name`
-	 */
-	set: <T extends ScopeValueName>(name: T, as: DeclareFn<Resource>) => T,
-
-	/**
-	 * Define what value will be given to `name` when the {@link Resource} is {@link prepare | provided}.
-	 * @param from the declarations used to {@link ScopeExport.set | declare} this value
-	 * @param name of the value being declared
-	 * @param as how to define the value
-	 * @returns `name`
-	 */
-	setFrom: <T extends ScopeValueName>(from: ScopeValueName[], name: T, as: DeriveFn<Resource>) => T,
-
-	/**
-	 * Give a {@link ScopeValueName} another name
-	 */
-	setTo: <T extends ScopeValueName>(valueName: ScopeValueName, name: T) => T,
-};
-
 /**
  * A mechanism to {@link declare | provide} in terms of a {@link Resource}, so that once it becomes available the values can be {@link inject}ed into lexical scopes.
  */
@@ -38,12 +14,6 @@ export class Scope<Resource = unknown> {
 
 	/** The dependencies between {@link values} */
 	private readonly dependencyTree: DependencyTree = new DependencyTree();
-
-	/** An implementation of {@link InjectFn} that requires values to be prepared *before* they are requested */
-	private readonly inject: InjectFn = name => {
-		const value = this.indexPreparedValues(name);
-		return new Injection(value.cached, true);
-	};
 
 	/** That which can be {@link inject}ed by the scope */
 	private readonly values: Map<ScopeValueName, ScopeValue<Resource>> = new Map();
@@ -59,28 +29,9 @@ export class Scope<Resource = unknown> {
 	}
 
 	/** Clears the state of the scope provider. */
-	public clear(this: this): void {
+	public readonly clear = (): void => {
 		this.dependencyTree.clear();
 		this.values.clear();
-	}
-
-	/**
-	 * @returns functions which can be used to declare scope values and inject scope values into lexical scope
-	 */
-	public export(): ScopeExport<Resource> {
-		const set = <T extends ScopeValueName>(name: T, as: DeclareFn<Resource> | DeriveFn<Resource>) => {
-			this.values.set(name, { prepared: false, fn: as });
-			return name;
-		};
-
-		const setFrom: ScopeExport<Resource>['setFrom'] = (from, name, as) => {
-			this.dependencyTree.on(from, name);
-			return set(name, as);
-		}
-
-		const setTo: ScopeExport<Resource>['setTo'] = (valueName, name) => setFrom([valueName], name, (_, inject) => inject(valueName).value);
-
-		return {set, setFrom, setTo};
 	}
 
 	/**
@@ -89,7 +40,7 @@ export class Scope<Resource = unknown> {
 	 * @throws {@link ReferenceError} if the `name` was not {@link defined}
 	 * @throws {@link UnpreparedError} if `name` was not prepared
 	 */
-	private indexPreparedValues(this: this, name: ScopeValueName): PreparedValue {
+	private readonly indexPreparedValues = (name: ScopeValueName): PreparedValue => {
 		const value = this.indexValues(name);
 		if (!value.prepared) {
 			throw new UnpreparedError(name);
@@ -102,7 +53,7 @@ export class Scope<Resource = unknown> {
 	 * @param name the name of the value
 	 * @throws {@link ReferenceError} when `name` is not in the `state`
 	 */
-	private indexValues(this: this, name: ScopeValueName): ScopeValue<Resource> {
+	private readonly indexValues = (name: ScopeValueName): ScopeValue<Resource> => {
 		const value = this.values.get(name);
 		if (value === undefined) {
 			throw new ReferenceError(`Attempted to prepare value ${name} before it was provided`);
@@ -110,6 +61,12 @@ export class Scope<Resource = unknown> {
 
 		return value;
 	}
+
+	/** An implementation of {@link InjectFn} that requires values to be prepared *before* they are requested */
+	private readonly inject: InjectFn = async name => {
+		const value = this.indexPreparedValues(name);
+		return new Injection(value.cached, true);
+	};
 
 	/**
 	 * @param name the value to prepare
@@ -119,7 +76,7 @@ export class Scope<Resource = unknown> {
 	 * @throws {@link UnpreparedError} when attempting to access unprepared values inside a {@link DeriveFn}
 	 * @see {@link declare}
 	 */
-	public prepare(this: this, name: ScopeValueName, resource: Resource): PreparedValue {
+	public readonly prepare = async (name: ScopeValueName, resource: Resource): Promise<PreparedValue> => {
 		{
 			const value = this.indexValues(name);
 			if (value.prepared) {
@@ -136,7 +93,7 @@ export class Scope<Resource = unknown> {
 				continue;
 			}
 
-			const cached = value.fn(resource, this.inject);
+			const cached = await value.fn(resource, this.inject);
 			this.values.set(dependency, ret = { cached, prepared: true });
 		}
 
@@ -150,10 +107,56 @@ export class Scope<Resource = unknown> {
 	/**
 	 * @returns an implementation of {@link InjectFn} which {@link prepare}s the resources requested of it lazily
 	 */
-	public prepareInjector(this: this, resource: Resource): InjectFn {
-		return name => {
-			const value = this.prepare(name, resource);
+	public readonly prepareInjector = (resource: Resource): InjectFn => {
+		return async name => {
+			const value = await this.prepare(name, resource);
 			return new Injection(value.cached, true);
 		}
+	};
+
+	/**
+	 * Define what value will be given to `name` when the {@link Resource} is {@link prepare | provided}.
+	 * @param name of the value
+	 * @param valueFn how to define the value
+	 * @returns `name`
+	 */
+	public readonly set = <T extends ScopeValueName>(name: T, valueFn: DeclareFn<Resource>): T => {
+		this.values.set(name, { prepared: false, fn: valueFn });
+		return name;
+	};
+
+	/**
+	 * Give a {@link ScopeValueName} another name.
+	 * WARN: this is a one way alias. Updating this value will not update the old one.
+	 * @param name of the alias
+	 * @param of the name `name` is aliased to
+	 * @returns `name`
+	 */
+	public readonly setAlias = <T extends ScopeValueName>(name: T, of: ScopeValueName): T =>
+		this.setFrom([of], name, async (_, inject) => (await inject(of)).value);
+
+	/**
+	 * Define what value will be given to `name` when the {@link Resource} is {@link prepare | provided}.
+	 * @param from the declarations used to {@link ScopeExport.set | declare} this value
+	 * @param name of the value being declared
+	 * @param valueFn how to define the value
+	 * @returns `name`
+	 */
+	public readonly setFrom = <T extends ScopeValueName>(
+		from: ScopeValueName[],
+		name: T,
+		valueFn: DeriveFn<Resource>,
+	): T => {
+		this.dependencyTree.on(from, name);
+		return this.set(name, valueFn as DeclareFn<Resource>);
 	}
+
+	/**
+	 * Define what value will be given to `name` when the {@link Resource} is {@link prepare | provided}.
+	 * @param name of the value
+	 * @param the value to set `name` to
+	 * @returns `name`
+	 */
+	public readonly setTo = <T extends ScopeValueName>(name: T, value: unknown): T =>
+		this.set(name, () => value);
 }

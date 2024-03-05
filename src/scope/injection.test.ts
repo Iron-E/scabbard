@@ -1,23 +1,24 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, test } from 'vitest';
 import { Injection, TypeInjectError } from './injection';
 
 describe(Injection, () => {
 	describe('optional <-> required', () => {
 		const value = Math.random();
 
-		const optional = new Injection(value, false);
-		const required = new Injection(value, true);
+		const injections = {
+			optional: new Injection(value, false),
+			required: new Injection(value, true),
+		};
 
-		describe(`optional`, () => {
-			it('converts to optional', () => {
-				expect(required.optional).to.eql(optional);
-			});
-		});
+		const cases = [
+			{ from: 'optional', to: 'required' },
+			{ from: 'required', to: 'optional' },
+		] as const;
 
-		describe(`required`, () => {
-			it('converts to required', () => {
-				expect(optional.required).to.eql(required);
-			});
+		test.each(cases)('$from -> $to', ({ from, to }) => {
+			const fromInjection = injections[from];
+			const toInjection = injections[to];
+			expect(fromInjection).has.property(to).that.deep.includes({ value: toInjection.value, _required: to === 'required' });
 		});
 	});
 

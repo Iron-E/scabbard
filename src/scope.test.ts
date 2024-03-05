@@ -3,33 +3,36 @@ import { Scope, UnpreparedError, UnpreparedValue } from './scope';
 import { randomString } from './util/rand.test';
 
 describe(Scope, () => {
-	const [a, b, c] = [randomString(), randomString(), randomString()];
-	const names = [a, b, c];
+	const a = randomString();
+	const b = randomString();
+	const c = randomString();
+	const d = randomString();
+	const names = [a, b, c, d];
 
-	function setup(): [Scope<number>, ReturnType<Scope<number>['export']>] {
+	function setup(): Scope<number> {
 		const scope = new Scope<number>();
-		const { set, setFrom, setTo } = scope.export();
 
 		beforeEach(() => {
-			set(a, v => v + 2);
-			setFrom([a], b, (v, inject) => inject(a).type('number') * v);
-			setTo(b, c);
+			scope.set(a, v => v + 2);
+			scope.setTo(b, Math.random());
+			scope.setFrom([a, b], c, async (v, inject) => ((await inject(a)).type('number') + (await inject(b)).type('number')) * v);
+			scope.setAlias(d, b);
 
 			return () => scope.clear();
 		});
 
-		return [scope, { set, setFrom, setTo }];
+		return scope;
 	}
 
-	describe('set, setFrom, setTo', () => {
-		const [scope] = setup();
+	describe('set, setAlias, setFrom, setTo', () => {
+		const scope = setup();
 
 		describe('stores values lazily', () => {
 			test.each(names)('name %#', name => {
 				const value = scope['values'].get(name);
-				expect(value).does.not.have.property('cached');
-				expect(value).has.property('fn').that.is.a('function');
-				expect(value).has.property('prepared').that.is.false;
+				expect(value).to.not.have.property('cached');
+				expect(value).to.have.property('fn').that.is.a('function');
+				expect(value).to.have.property('prepared').that.is.false;
 			});
 		});
 
@@ -43,10 +46,10 @@ describe(Scope, () => {
 
 	});
 
-	describe('setTo', () => {
-		const [scope] = setup();
+	describe('setAlias', () => {
+		const scope = setup();
 
-		it('aliases values', () => {
+		it('aliases values', async () => {
 			const inject = scope['inject'];
 			const resource = 3;
 
@@ -58,19 +61,20 @@ describe(Scope, () => {
 			const bValue = bFn(resource, inject);
 			scope['values'].set(b, { prepared: true, cached: bValue });
 
-			const { fn: cFn } = scope['values'].get(c) as UnpreparedValue<number>;
-			const cValue = cFn(resource, inject);
+			const { fn: dFn } = scope['values'].get(d) as UnpreparedValue<number>;
+			const dValue = await dFn(resource, inject);
 
-			expect(cValue).to.eql(bValue);
+			expect(dValue).to.eql(bValue);
 		});
 	});
 
 	describe(Scope.prototype.prepare, () => {
-		const [scope, { setFrom: derive }] = setup();
+		const scope = setup();
+		const { prepare, setFrom } = scope;
 
 		describe('caches preparation', () => {
-			it.each(names.toReversed())('of %s', name => {
-				scope.prepare(name, Math.random());
+			it.each(names.toReversed())('of %s', async name => {
+				await prepare(name, Math.random());
 				const value = scope['values'].get(name);
 				expect(value).does.not.have.property('fn');
 				expect(value).has.property('cached');
@@ -79,25 +83,25 @@ describe(Scope, () => {
 		});
 
 		describe('throws', () => {
-			it('when injecting undeclared values', () => {
-				const d = randomString();
-				const e = derive([d], randomString(), (_, inject) => inject(d).value);
-				expect(() => { scope.prepare(e, Math.random()); }).to.throw(ReferenceError);
+			it('when injecting undeclared values', async () => {
+				const f = randomString();
+				const g = setFrom([f], randomString(), async (_, inject) => (await inject(d)).value);
+				await expect(() => prepare(g, Math.random())).rejects.toThrow(ReferenceError);
 			});
 
-			it('when omitting values from dep list', () => {
-				const e = derive([], randomString(), (_, inject) => inject(a).value);
-				expect(() => { scope.prepare(e, Math.random()); }).to.throw(UnpreparedError);
+			it('when omitting values from dep list', async () => {
+				const e = setFrom([], randomString(), async (_, inject) => (await inject(a)).value);
+				await expect(() => prepare(e, Math.random())).rejects.toThrow(UnpreparedError);
 			});
 		});
 	});
 
 	describe.each(names.toReversed())(`inject %s`, name => {
-		const [scope] = setup();
-		const inject = scope.prepareInjector(Math.random());
+		const { prepareInjector } = setup();
+		const inject = prepareInjector(Math.random());
 
-		it('prepares and injects values', () => {
-			const injection = inject(name);
+		it('prepares and injects values', async () => {
+			const injection = await inject(name);
 			expect(injection).to.have.property('value').that.is.a('number');
 		});
 	});

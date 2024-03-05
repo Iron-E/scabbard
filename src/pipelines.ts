@@ -19,7 +19,7 @@ const PIPES: Readonly<{ name: string, fn: Fn }>[] = [];
 
 /** Values  */
 const SCOPE = new Scope<Client>();
-export const { set, setFrom, setTo } = SCOPE.export();
+export const { set, setAlias, setFrom, setTo } = SCOPE;
 
 /**
  * Queues a pipeline to be {@link run}.

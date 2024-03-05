@@ -5,5 +5,5 @@ export type * from './fs';
 export type * from './pipelines';
 export type * from './util';
 
-export { enqueue, run, set, setFrom, setTo } from './pipelines';
+export { enqueue, run, set, setAlias, setFrom, setTo } from './pipelines';
 export { parseIgnoreFile as readIgnoreFile } from './fs';

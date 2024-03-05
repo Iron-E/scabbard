@@ -1,6 +1,8 @@
 import type { FieldName } from "../util";
 import type { Injection } from "./injection";
 
+export type ScopeValueName = FieldName;
+
 /**
  * Put a value from this scope into the lexical scope
  * @param name of the value to get
@@ -8,7 +10,7 @@ import type { Injection } from "./injection";
  * @throws {@link ReferenceError} if the `name` was not {@link defined}
  * @throws {@link UnpreparedError} if `name` was not prepared
  */
-export type InjectFn = (name: ResourceValueName) => Injection;
+export type InjectFn = (name: ScopeValueName) => Promise<Injection>;
 
 /**
  * The function used to declare a value in a scope.
@@ -36,6 +38,4 @@ export type UnpreparedValue<Resource = unknown, T = unknown> = {
 	prepared: false,
 };
 
-export type ResourceValueName = FieldName;
-
-export type ResourceValue<Resource = unknown, T = unknown> = PreparedValue<T> | UnpreparedValue<Resource, T>;
+export type ScopeValue<Resource = unknown, T = unknown> = PreparedValue<T> | UnpreparedValue<Resource, T>;
