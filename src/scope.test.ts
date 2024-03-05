@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, test } from 'vitest';
-import { DuplicateValueError, Scope, UnpreparedError } from './scope';
+import { Scope, UnpreparedError } from './scope';
 import { randomString } from './util/rand.test';
 
 describe(Scope, () => {
@@ -12,8 +12,8 @@ describe(Scope, () => {
 
 		beforeEach(() => {
 			declare(a, v => v + 2);
-			derive([a], b, (v, inject) => inject(a).number * v);
-			derive([b], c, (v, inject) => (inject(b).number + v).toString());
+			derive([a], b, (v, inject) => inject(a).type('number') * v);
+			derive([b], c, (v, inject) => (inject(b).type('number') + v).toString());
 
 			return () => scope.clear();
 		});
@@ -22,11 +22,7 @@ describe(Scope, () => {
 	}
 
 	describe('declare', () => {
-		const [scope, { declare }] = setup();
-
-		it('disallows duplicate value names', () => {
-			expect(() => declare(a, () => { })).to.throw(DuplicateValueError);
-		});
+		const [scope] = setup();
 
 		it('stores values', () => {
 			const scope_names = Array.from(scope.names);
@@ -76,8 +72,7 @@ describe(Scope, () => {
 
 		it('prepares and injects values', () => {
 			const injection = inject(name);
-			const ty = name === c ? 'string' : 'number';
-			expect(injection).to.have.property(ty).that.is.a(ty);
+			expect(injection).to.have.property('value').that.is.a(name === c ? 'string' : 'number');
 		});
 	});
 });

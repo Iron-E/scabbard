@@ -3,56 +3,37 @@ import { TypeInjectError } from './injection/type-inject-error';
 
 export { TypeInjectError };
 
-export class Injection {
-	public constructor(public readonly value: unknown) { }
+type InjectValue<Required extends boolean = true, T = unknown> = Required extends true ? T : T | undefined;
+
+/**
+ * An unknown value which may be narrowed.
+ * @param <Required> whether the injection value can be `undefined`
+ */
+export class Injection<Required extends boolean = true> {
+	public constructor(
+		/** The raw value of the injection */
+		public readonly value: unknown,
+
+		/** Whether the {@link value} may be `undefined` if typ  */
+		private _required: Required,
+	) { }
+
+	/** @returns an injection whose value is optional */
+	public get optional(): Injection<false> {
+		return new Injection(this.value, false);
+	}
+
+	/** @returns an injection whose value is required */
+	public get required(): Injection<true> {
+		return new Injection(this.value, true);
+	}
 
 	/**
-	 * @returns {@link value} as a `bigint`
-	 * @throws {@link TypeInjectError} if the value is not of the type described
+	 * @returns if this injection value is not required, and the value is `undefined`.
 	 */
-	public get bigint(): bigint { return this.type('bigint'); }
-
-	/**
-	 * @returns {@link value} as a `boolean`
-	 * @throws {@link TypeInjectError} if the value is not of the type described
-	 */
-	public get boolean(): boolean { return this.type('boolean'); }
-
-	/**
-	 * @returns {@link value} as a `function`
-	 * @throws {@link TypeInjectError} if the value is not of the type described
-	 */
-	public get function(): Function { return this.type('function'); }
-
-	/**
-	 * @returns {@link value} as a `number`
-	 * @throws {@link TypeInjectError} if the value is not of the type described
-	 */
-	public get number(): number { return this.type('number'); }
-
-	/**
-	 * @returns {@link value} as a `object`
-	 * @throws {@link TypeInjectError} if the value is not of the type described
-	 */
-	public get object(): object { return this.type('object'); }
-
-	/**
-	 * @returns {@link value} as a `string`
-	 * @throws {@link TypeInjectError} if the value is not of the type described
-	 */
-	public get string(): string { return this.type('string'); }
-
-	/**
-	 * @returns {@link value} as a `symbol`
-	 * @throws {@link TypeInjectError} if the value is not of the type described
-	 */
-	public get symbol(): symbol { return this.type('symbol'); }
-
-	/**
-	 * @returns {@link value} as a `undefined`
-	 * @throws {@link TypeInjectError} if the value is not of the type described
-	 */
-	public get undefined(): undefined { return this.type('undefined'); }
+	private get valueIsOptionalAndUndefined(): boolean {
+		return (!this._required) && this.value === undefined;
+	}
 
 	/**
 	 * @param name of the value to inject
@@ -60,9 +41,11 @@ export class Injection {
 	 * @returns the value associated with `name`, given the type desired
 	 * @throws {@link TypeInjectError} if the value is not of the type described
 	 */
-	check<T>(this: this, checkFn: (value: unknown) => value is T): T {
+	check<T>(this: this, checkFn: (value: unknown) => value is T): InjectValue<Required, T> {
 		if (checkFn(this.value)) {
 			return this.value;
+		} else if (this.valueIsOptionalAndUndefined) {
+			return undefined as InjectValue<Required, T>;
 		}
 
 		throw new TypeInjectError(checkFn.name, this.value);
@@ -74,9 +57,11 @@ export class Injection {
 	 * @returns the value associated with `name`, given the type desired
 	 * @throws {@link TypeInjectError} if the value is not of the type described
 	 */
-	instance<T>(this: this, of: Constructor<T>): InstanceOf<T> {
+	instance<T>(this: this, of: Constructor<T>): InjectValue<Required, InstanceOf<T>> {
 		if (this.value instanceof of) {
 			return this.value;
+		} else if (this.valueIsOptionalAndUndefined) {
+			return undefined as InjectValue<Required, InstanceOf<T>>;
 		}
 
 		throw new TypeInjectError(of.name, this.value);
@@ -88,9 +73,11 @@ export class Injection {
 	 * @returns the value associated with `name`, given the type desired
 	 * @throws {@link TypeInjectError} if the value is not of the type described
 	 */
-	type<T extends TypeOf>(this: this, of: T): TheTypeOf<T> {
+	type<T extends TypeOf>(this: this, of: T): InjectValue<Required, TheTypeOf<T>> {
 		if (typeof this.value === of) {
 			return this.value as TheTypeOf<T>;
+		} else if (this.valueIsOptionalAndUndefined) {
+			return undefined as InjectValue<Required, TheTypeOf<T>>;
 		}
 
 		throw new TypeInjectError(of, this.value);

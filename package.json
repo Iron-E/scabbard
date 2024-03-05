@@ -48,6 +48,14 @@
 		"./rust": {
 			"default": "./dist/rust/index.js",
 			"types": "./dist/rust/index.d.ts"
+		},
+		"./rust/scope/*": {
+			"default": "./dist/rust/scope/*.js",
+			"types": "./dist/rust/scope/*.d.ts"
+		},
+		"./scope/*": {
+			"default": "./dist/std_scope/*.js",
+			"types": "./dist/std_scope/*.d.ts"
 		}
 	},
 	"files": [

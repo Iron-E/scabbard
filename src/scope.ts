@@ -1,11 +1,10 @@
 import type { DeclareFn, DeriveFn, InjectFn, PreparedValue, ScopeValue, ScopeValueName, UnpreparedValue } from './scope/value';
-import { DuplicateValueError } from './scope/duplicate-error';
 import { Injection, TypeInjectError } from './scope/injection';
 import { DependencyTree } from './dependencies';
 import { UnpreparedError } from './scope/unprepared-error';
 
 export type { InjectFn, PreparedValue, ScopeValue, ScopeValueName, UnpreparedValue };
-export { DuplicateValueError, Injection, TypeInjectError, UnpreparedError };
+export { Injection, TypeInjectError, UnpreparedError };
 
 type ScopeExport<Resource> = {
 	/**
@@ -13,7 +12,6 @@ type ScopeExport<Resource> = {
 	 * @param name of the value
 	 * @param as how to define the value
 	 * @returns `name`
-	 * @throws {@link DuplicateValueError} if `name` was already defined
 	 */
 	declare: <T extends ScopeValueName>(name: T, as: DeclareFn<Resource>) => T,
 
@@ -23,7 +21,6 @@ type ScopeExport<Resource> = {
 	 * @param name of the value being declared
 	 * @param as how to define the value
 	 * @returns `name`
-	 * @throws {@link DuplicateValueError} if `name` was already defined
 	 */
 	derive: <T extends ScopeValueName>(from: ScopeValueName[], name: T, as: DeriveFn<Resource>) => T,
 };
@@ -42,7 +39,7 @@ export class Scope<Resource = unknown> {
 	/** An implementation of {@link InjectFn} that requires values to be prepared *before* they are requested */
 	private readonly inject: InjectFn = name => {
 		const value = this.indexPreparedValues(name);
-		return new Injection(value.cached);
+		return new Injection(value.cached, true);
 	};
 
 	/** That which can be {@link inject}ed by the scope */
@@ -65,29 +62,15 @@ export class Scope<Resource = unknown> {
 	}
 
 	/**
-	 * @param name the name to assert the uniqueness of
-	 * @throws DuplicateValueError if the value was not unique
-	 */
-	private assertNameUnique(name: ScopeValueName): void {
-		if (this.values.has(name)) {
-			throw new DuplicateValueError(name);
-		}
-	}
-
-	/**
 	 * @returns functions which can be used to declare scope values and inject scope values into lexical scope
 	 */
 	public export(): ScopeExport<Resource> {
 		const declare: ScopeExport<Resource>['declare'] = (name, as) => {
-			this.assertNameUnique(name);
-
 			this.values.set(name, { prepared: false, fn: as });
 			return name;
 		};
 
 		const derive: ScopeExport<Resource>['derive'] = (from, name, as) => {
-			this.assertNameUnique(name);
-
 			this.dependencyTree.on(from, name);
 			this.values.set(name, { prepared: false, fn: as });
 			return name;
@@ -166,7 +149,7 @@ export class Scope<Resource = unknown> {
 	public prepareInjector(this: this, resource: Resource): InjectFn {
 		return name => {
 			const value = this.prepare(name, resource);
-			return new Injection(value.cached);
+			return new Injection(value.cached, true);
 		}
 	}
 }
