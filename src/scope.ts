@@ -13,25 +13,28 @@ type ScopeExport<Resource> = {
 	 * @param as how to define the value
 	 * @returns `name`
 	 */
-	declare: <T extends ScopeValueName>(name: T, as: DeclareFn<Resource>) => T,
+	set: <T extends ScopeValueName>(name: T, as: DeclareFn<Resource>) => T,
 
 	/**
 	 * Define what value will be given to `name` when the {@link Resource} is {@link prepare | provided}.
-	 * @param from the declarations used to {@link ScopeExport.declare | declare} this value
+	 * @param from the declarations used to {@link ScopeExport.set | declare} this value
 	 * @param name of the value being declared
 	 * @param as how to define the value
 	 * @returns `name`
 	 */
-	derive: <T extends ScopeValueName>(from: ScopeValueName[], name: T, as: DeriveFn<Resource>) => T,
+	setFrom: <T extends ScopeValueName>(from: ScopeValueName[], name: T, as: DeriveFn<Resource>) => T,
+
+	/**
+	 * Give a {@link ScopeValueName} another name
+	 */
+	setTo: <T extends ScopeValueName>(valueName: ScopeValueName, name: T) => T,
 };
 
 /**
  * A mechanism to {@link declare | provide} in terms of a {@link Resource}, so that once it becomes available the values can be {@link inject}ed into lexical scopes.
  */
 export class Scope<Resource = unknown> {
-	public constructor(
-	) {
-	}
+	public constructor() { }
 
 	/** The dependencies between {@link values} */
 	private readonly dependencyTree: DependencyTree = new DependencyTree();
@@ -65,18 +68,19 @@ export class Scope<Resource = unknown> {
 	 * @returns functions which can be used to declare scope values and inject scope values into lexical scope
 	 */
 	public export(): ScopeExport<Resource> {
-		const declare: ScopeExport<Resource>['declare'] = (name, as) => {
+		const set = <T extends ScopeValueName>(name: T, as: DeclareFn<Resource> | DeriveFn<Resource>) => {
 			this.values.set(name, { prepared: false, fn: as });
 			return name;
 		};
 
-		const derive: ScopeExport<Resource>['derive'] = (from, name, as) => {
+		const setFrom: ScopeExport<Resource>['setFrom'] = (from, name, as) => {
 			this.dependencyTree.on(from, name);
-			this.values.set(name, { prepared: false, fn: as });
-			return name;
+			return set(name, as);
 		}
 
-		return { declare, derive };
+		const setTo: ScopeExport<Resource>['setTo'] = (valueName, name) => setFrom([valueName], name, (_, inject) => inject(valueName).value);
+
+		return {set, setFrom, setTo};
 	}
 
 	/**

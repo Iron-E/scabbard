@@ -4,11 +4,11 @@ import type { Injection } from "./injection";
 /**
  * Put a value from this scope into the lexical scope
  * @param name of the value to get
- * @returns the value in {@link Scope}
+ * @returns the value in {@link Resource}
  * @throws {@link ReferenceError} if the `name` was not {@link defined}
  * @throws {@link UnpreparedError} if `name` was not prepared
  */
-export type InjectFn = (name: ScopeValueName) => Injection;
+export type InjectFn = (name: ResourceValueName) => Injection;
 
 /**
  * The function used to declare a value in a scope.
@@ -31,11 +31,11 @@ export type PreparedValue<T = unknown> = {
 	cached: T,
 };
 
-export type UnpreparedValue<Scope = unknown, T = unknown> = {
-	fn: DeclareFn<Scope, T> | DeriveFn<Scope, T>,
+export type UnpreparedValue<Resource = unknown, T = unknown> = {
+	fn: DeclareFn<Resource, T> | DeriveFn<Resource, T>,
 	prepared: false,
 };
 
-export type ScopeValueName = FieldName;
+export type ResourceValueName = FieldName;
 
-export type ScopeValue<Scope = unknown, T = unknown> = PreparedValue<T> | UnpreparedValue<Scope, T>;
+export type ResourceValue<Resource = unknown, T = unknown> = PreparedValue<T> | UnpreparedValue<Resource, T>;
