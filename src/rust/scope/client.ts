@@ -24,7 +24,7 @@ export const CARGO_CACHE_HOME = set(`${prefix}CargoHomeCache`, client => client.
  * @param {@link CARGO_CACHE_HOME} the cargo cache
  * @returns {@link Container} the {@link Client} with `rust:alpine` as a base image, and with the base dependencies.
  */
-export const BASE_CONTAINER = setFrom([BASE_IMAGE_NAME, CARGO_CACHE_HOME], `${prefix}base`, async (client, inject) => {
+export const BASE_CONTAINER = setFrom([BASE_IMAGE_NAME, CARGO_CACHE_HOME], `${prefix}BaseContainer`, async (client, inject) => {
 	const baseImageName = (await inject(BASE_IMAGE_NAME)).type('string');
 	const cargoCacheHome = (await inject(CARGO_CACHE_HOME)).instance(CacheVolume);
 
@@ -43,7 +43,7 @@ export const BASE_CONTAINER = setFrom([BASE_IMAGE_NAME, CARGO_CACHE_HOME], `${pr
  * @param {@link IGNORE_FILE} the excluded directories
  * @returns {@link Container} the {@link Client} with a bare container having mounted the {@link HOST_PROJECT_DIR}
  */
-export const WITH_PROJECT = setFrom([BASE_CONTAINER, HOST_PROJECT_DIR, IGNORE_FILE], `${prefix}base`, async (_, inject) => {
+export const WITH_PROJECT = setFrom([BASE_CONTAINER, HOST_PROJECT_DIR, IGNORE_FILE], `${prefix}WithProject`, async (_, inject) => {
 	const baseContainer = (await inject(BASE_CONTAINER)).instance(Container);
 	const hostProjectDir = (await inject(HOST_PROJECT_DIR)).instance(Directory);
 	const ignoreFile = (await inject(IGNORE_FILE)).optional.check((v): v is string[] => {
