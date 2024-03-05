@@ -77,4 +77,23 @@ describe(DependencyTree, () => {
 			});
 		});
 	});
+
+	describe(DependencyTree.prototype.loadAllOrder, () => {
+		const [deps, _] = setup({
+			a: ['b'],
+			b: ['d', 'e'],
+
+			c: ['k', 'd'],
+			d: ['k'],
+		});
+
+		it('detects dependency cycles', () => {
+			deps.on(['c'], 'k');
+			expect(() => deps.loadAllOrder()).to.throw(DependencyCycleError);
+		});
+
+		it('suggests loading all entries', () => {
+			expect(deps.loadAllOrder()).to.eql(new Set(['d', 'e', 'b', 'a', 'k', 'c']));
+		});
+	});
 });
