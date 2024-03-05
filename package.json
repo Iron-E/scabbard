@@ -33,30 +33,14 @@
 		"node": ">=21"
 	},
 	"exports": {
-		".": {
-			"default": "./dist/index.js",
-			"types": "./dist/index.d.ts"
-		},
-		"./fs": {
-			"default": "./dist/fs.js",
-			"types": "./dist/fs.d.ts"
-		},
-		"./pipelines": {
-			"default": "./dist/pipelines.js",
-			"types": "./dist/pipelines.d.ts"
-		},
-		"./rust": {
-			"default": "./dist/rust/index.js",
-			"types": "./dist/rust/index.d.ts"
-		},
-		"./rust/scope/*": {
-			"default": "./dist/rust/scope/*.js",
-			"types": "./dist/rust/scope/*.d.ts"
-		},
-		"./scope/*": {
-			"default": "./dist/std_scope/*.js",
-			"types": "./dist/std_scope/*.d.ts"
-		}
+		".": { "default": "./dist/index.js", "types": "./dist/index.d.ts" },
+		"./fs": { "default": "./dist/fs.js", "types": "./dist/fs.d.ts" },
+		"./pipelines": { "default": "./dist/pipelines.js", "types": "./dist/pipelines.d.ts" },
+		"./rust": { "default": "./dist/rust/index.js", "types": "./dist/rust/index.d.ts" },
+		"./rust/scope": { "default": "./dist/rust/scope/index.js", "types": "./dist/rust/scope/index.d.ts" },
+		"./rust/scope/*": { "default": "./dist/rust/scope/*.js", "types": "./dist/rust/scope/*.d.ts" },
+		"./scope": { "default": "./dist/std_scope/index.js", "types": "./dist/std_scope/index.d.ts" },
+		"./scope/*": { "default": "./dist/std_scope/*.js", "types": "./dist/std_scope/*.d.ts" }
 	},
 	"files": [
 		"dist/"
