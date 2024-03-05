@@ -59,7 +59,7 @@ describe(DependencyTree, () => {
 		});
 
 		describe('detects dependency cycles', () => {
-			test.each(Object.keys(data).concat('e'))('on %s', name => {
+			test.each(Object.keys(data).concat('e'))('from %s', name => {
 				deps.on(['a'], 'e');
 				expect(() => deps.loadOrder(name)).to.throw(DependencyCycleError);
 			});

@@ -1,34 +1,31 @@
-import type { ScopeValueName, ScopeValue, PreparedValue, ProvideWith, UnpreparedValue } from './scope/value';
+import type { DeclareFn, DeriveFn, InjectFn, PreparedValue, ScopeValue, ScopeValueName, UnpreparedValue } from './scope/value';
 import { DuplicateValueError } from './scope/duplicate-error';
 import { Injection, TypeInjectError } from './scope/injection';
 import { DependencyTree } from './dependencies';
 import { UnpreparedError } from './scope/unprepared-error';
 
-export type { PreparedValue, ProvideWith, ScopeValue, ScopeValueName, UnpreparedValue };
+export type { PreparedValue, ScopeValue, ScopeValueName, UnpreparedValue };
 export { DuplicateValueError, Injection, TypeInjectError, UnpreparedError };
 
 type ScopeExport<Resource> = {
 	/**
 	 * Define what value will be given to `name` when the {@link Resource} is {@link prepare | provided}.
 	 * @param name of the value
-	 * @param dependencies what other declarations must be {@link prepare | prepared} before this
-	 * @param as_ how to define the value
+	 * @param as how to define the value
+	 * @returns `name`
 	 * @throws {@link DuplicateValueError} if `name` was already defined
-	 * @throws {@link TypeError} if `as_` is not given
 	 */
-	declare:
-	& ((name: ScopeValueName, as_: (resource: Resource) => unknown) => void)
-	& ((name: ScopeValueName, dependencies: ScopeValueName[], as_: (resource: Resource) => unknown) => void)
-	,
+	declare: <T extends ScopeValueName>(name: T, as: DeclareFn<Resource>) => T,
 
 	/**
-	 * Put a value from this scope into the lexical scope
-	 * @param name of the value to get
-	 * @returns the value in {@link Scope}
-	 * @throws {@link ReferenceError} if the `name` was not {@link defined}
-	 * @throws {@link UnpreparedError} if `name` was not prepared
+	 * Define what value will be given to `name` when the {@link Resource} is {@link prepare | provided}.
+	 * @param from the declarations used to {@link ScopeExport.declare | declare} this value
+	 * @param name of the value being declared
+	 * @param as how to define the value
+	 * @returns `name`
+	 * @throws {@link DuplicateValueError} if `name` was already defined
 	 */
-	inject: (name: ScopeValueName) => Injection,
+	derive: <T extends ScopeValueName>(from: ScopeValueName[], name: T, as: DeriveFn<Resource>) => T,
 };
 
 /**
@@ -36,12 +33,20 @@ type ScopeExport<Resource> = {
  */
 export class Scope<Resource = unknown> {
 	public constructor(
-		/** The dependencies between {@link values} */
-		private readonly dependencyTree: DependencyTree = new DependencyTree(),
+	) {
+	}
 
-		/** That which can be {@link inject}ed by the scope */
-		private readonly values: Map<ScopeValueName, ScopeValue<Resource>> = new Map(),
-	) { }
+	/** The dependencies between {@link values} */
+	private readonly dependencyTree: DependencyTree = new DependencyTree();
+
+	/** An implementation of {@link InjectFn} that requires values to be prepared *before* they are requested */
+	private readonly inject: InjectFn = name => {
+		const value = this.indexPreparedValues(name);
+		return new Injection(value.cached);
+	};
+
+	/** That which can be {@link inject}ed by the scope */
+	private readonly values: Map<ScopeValueName, ScopeValue<Resource>> = new Map();
 
 	/** The names of all the values in scope */
 	public get names(): IterableIterator<ScopeValueName> {
@@ -60,33 +65,35 @@ export class Scope<Resource = unknown> {
 	}
 
 	/**
+	 * @param name the name to assert the uniqueness of
+	 * @throws DuplicateValueError if the value was not unique
+	 */
+	private assertNameUnique(name: ScopeValueName): void {
+		if (this.values.has(name)) {
+			throw new DuplicateValueError(name);
+		}
+	}
+
+	/**
 	 * @returns functions which can be used to declare scope values and inject scope values into lexical scope
 	 */
 	public export(): ScopeExport<Resource> {
-		const declare = (name: ScopeValueName, asOrDependencies: ScopeValueName[] | ProvideWith<Resource>, as_?: ProvideWith<Resource>) => {
-			if (this.values.has(name)) {
-				throw new DuplicateValueError(name);
-			}
+		const declare: ScopeExport<Resource>['declare'] = (name, as) => {
+			this.assertNameUnique(name);
 
-			if (typeof asOrDependencies === 'function') {
-				as_ = asOrDependencies;
-			} else {
-				this.dependencyTree.on(asOrDependencies, name);
-				if (as_ === undefined) {
-					throw new TypeError('Must specify function to provide with');
-				}
-			}
-
-			this.values.set(name, { prepared: false, fn: as_ });
-			return this;
-		}
-
-		const inject = (name: ScopeValueName) => {
-			const value = this.indexPreparedValues(name);
-			return new Injection(value.cached);
+			this.values.set(name, { prepared: false, fn: as });
+			return name;
 		};
 
-		return { declare, inject };
+		const derive: ScopeExport<Resource>['derive'] = (from, name, as) => {
+			this.assertNameUnique(name);
+
+			this.dependencyTree.on(from, name);
+			this.values.set(name, { prepared: false, fn: as });
+			return name;
+		}
+
+		return { declare, derive };
 	}
 
 	/**
@@ -97,7 +104,7 @@ export class Scope<Resource = unknown> {
 	 */
 	private indexPreparedValues(this: this, name: ScopeValueName): PreparedValue {
 		const value = this.indexValues(name);
-		if (value === undefined || !value.prepared) {
+		if (!value.prepared) {
 			throw new UnpreparedError(name);
 		}
 
@@ -118,44 +125,48 @@ export class Scope<Resource = unknown> {
 	}
 
 	/**
-	 * @param resource to prepare the values with
-	 * @param name the value to prepare. If `undefined`, prepare all values
-	 */
-	private _prepare(resource: Resource, name?: ScopeValueName): void {
-		const order = name === undefined
-			? this.dependencyTree.loadAllOrder()
-			: this.dependencyTree.loadOrder(name)
-			;
-
-		for (const dependency of order) {
-			const value = this.indexValues(dependency);
-			if (value.prepared) { // has been prepared previously
-				continue;
-			}
-
-			const cached = value.fn(resource);
-			this.values.set(dependency, { cached, prepared: true });
-		}
-	}
-
-	/**
 	 * @param name the value to prepare
 	 * @param resource the resource to provide the scope
 	 * @throws {@link ReferenceError} when `name` (or one of its dependencies) was not {@link declare}d
+	 * @throws {@link TypeError} when preparation is required but no values become prepared
+	 * @throws {@link UnpreparedError} when attempting to access unprepared values inside a {@link DeriveFn}
 	 * @see {@link declare}
 	 */
-	public prepare(this: this, name: ScopeValueName, resource: Resource): void {
-		if (this.indexValues(name).prepared) {
-			return; // has been prepared previously
+	public prepare(this: this, name: ScopeValueName, resource: Resource): PreparedValue {
+		{
+			const value = this.indexValues(name);
+			if (value.prepared) {
+				return value; // has been prepared previously
+			}
 		}
 
-		this._prepare(resource, name);
+		let ret: PreparedValue | undefined = undefined;
+		const order = this.dependencyTree.loadOrder(name);
+		for (const dependency of order) {
+			const value = this.indexValues(dependency);
+			if (value.prepared) { // has been prepared previously
+				ret = value;
+				continue;
+			}
+
+			const cached = value.fn(resource, this.inject);
+			this.values.set(dependency, ret = { cached, prepared: true });
+		}
+
+		if (ret === undefined) {
+			throw TypeError('No values were prepared');
+		}
+
+		return ret;
 	}
 
 	/**
-	 * {@link prepare} all of the values in scope for {@link inject}ion
+	 * @returns an implementation of {@link InjectFn} which {@link prepare}s the resources requested of it lazily
 	 */
-	public prepareAll(this: this, resource: Resource): void {
-		this._prepare(resource);
+	public prepareInjector(this: this, resource: Resource): InjectFn {
+		return name => {
+			const value = this.prepare(name, resource);
+			return new Injection(value.cached);
+		}
 	}
 }

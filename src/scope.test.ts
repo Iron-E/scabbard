@@ -8,24 +8,24 @@ describe(Scope, () => {
 
 	function setup(): [Scope<number>, ReturnType<Scope<number>['export']>] {
 		const scope = new Scope<number>();
-		const { declare, inject } = scope.export();
+		const { declare, derive } = scope.export();
 
 		beforeEach(() => {
 			declare(a, v => v + 2);
-			declare(b, [a], v => inject(a).number * v);
-			declare(c, [b], v => (inject(b).number + v).toString());
+			derive([a], b, (v, inject) => inject(a).number * v);
+			derive([b], c, (v, inject) => (inject(b).number + v).toString());
 
 			return () => scope.clear();
 		});
 
-		return [scope, { declare, inject }];
+		return [scope, { declare, derive }];
 	}
 
 	describe('declare', () => {
 		const [scope, { declare }] = setup();
 
 		it('disallows duplicate value names', () => {
-			expect(() => declare(a, () => {})).to.throw(DuplicateValueError);
+			expect(() => declare(a, () => { })).to.throw(DuplicateValueError);
 		});
 
 		it('stores values', () => {
@@ -43,39 +43,38 @@ describe(Scope, () => {
 		});
 	});
 
-	describe.each(names.toReversed())(`${Scope.prototype.prepare.name} %s`, name => {
-		const [scope, _] = setup();
-		beforeEach(() => scope.prepare(name, Math.random()));
+	describe(Scope.prototype.prepare, () => {
+		const [scope, { derive }] = setup();
 
-		it('caches preparation', () => {
-			const value = scope['values'].get(name);
-			expect(value).does.not.have.property('fn');
-			expect(value).has.property('cached');
-			expect(value).has.property('prepared').that.is.true;
+		describe('caches preparation', () => {
+			it.each(names.toReversed())('of %s', name => {
+				scope.prepare(name, Math.random());
+				const value = scope['values'].get(name);
+				expect(value).does.not.have.property('fn');
+				expect(value).has.property('cached');
+				expect(value).has.property('prepared').that.is.true;
+			});
 		});
-	});
 
-	describe(Scope.prototype.prepareAll, () => {
-		const [scope, _] = setup();
-		beforeEach(() => scope.prepareAll(Math.random()));
+		describe('throws', () => {
+			it('when injecting undeclared values', () => {
+				const d = randomString();
+				const e = derive([d], randomString(), (_, inject) =>  inject(d).value);
+				expect(() => { scope.prepare(e, Math.random()); }).to.throw(ReferenceError);
+			});
 
-		test.each(names.toReversed())('has prepared %#', name => {
-			const value = scope['values'].get(name);
-			expect(value).does.not.have.property('fn');
-			expect(value).has.property('cached');
-			expect(value).has.property('prepared').that.is.true;
+			it('when omitting values from dep list', () => {
+				const e = derive([], randomString(), (_, inject) =>  inject(a).value);
+				expect(() => { scope.prepare(e, Math.random()); }).to.throw(UnpreparedError);
+			});
 		});
 	});
 
 	describe.each(names.toReversed())(`inject %s`, name => {
-		const [scope, { inject }] = setup();
+		const [scope] = setup();
+		const inject = scope.prepareInjector(Math.random());
 
-		it('fails when unprepared', () => {
-			expect(() => inject(name)).to.throw(UnpreparedError);
-		});
-
-		it('succeeds when prepared', () => {
-			scope.prepare(name, Math.random());
+		it('prepares and injects values', () => {
 			const injection = inject(name);
 			const ty = name === c ? 'string' : 'number';
 			expect(injection).to.have.property(ty).that.is.a(ty);
