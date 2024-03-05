@@ -1,10 +1,8 @@
 import './util';
 import { connect, type Client } from '@dagger.io/dagger';
-import { Scope } from './scope';
+import { Scope, type InjectFn } from './scope';
 
-export { declare, inject };
-
-type Fn = (client: Client) => Promise<void>;
+type Fn = (client: Client, inject: InjectFn) => Promise<void>;
 
 declare global {
 	interface String {
@@ -21,7 +19,7 @@ const PIPES: Readonly<{ name: string, fn: Fn }>[] = [];
 
 /** Values  */
 const SCOPE = new Scope<Client>();
-const { declare, inject } = SCOPE.export();
+export const { declare, derive } = SCOPE.export();
 
 /**
  * Queues a pipeline to be {@link run}.
@@ -37,7 +35,6 @@ export function enqueue(name: string, fn: Fn): void {
 export async function run(): Promise<void> {
 	connect(
 		async client => {
-			SCOPE.prepareAll(client);
 			const startedPipes = Array.from(startPipesOn(client));
 			await Promise.all(startedPipes);
 		},
@@ -50,9 +47,10 @@ export async function run(): Promise<void> {
  * @returns handles to the started pipes
  */
 function* startPipesOn(client: Client): Generator<Promise<void>, void> {
+	const inject = SCOPE.prepareInjector(client);
 	for (const pipe of PIPES) {
 		const pipeClient = client.pipeline(pipe.name);
-		yield pipe.fn(pipeClient);
+		yield pipe.fn(pipeClient, inject);
 	}
 }
 

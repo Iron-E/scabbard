@@ -4,7 +4,7 @@ import { Injection, TypeInjectError } from './scope/injection';
 import { DependencyTree } from './dependencies';
 import { UnpreparedError } from './scope/unprepared-error';
 
-export type { PreparedValue, ScopeValue, ScopeValueName, UnpreparedValue };
+export type { InjectFn, PreparedValue, ScopeValue, ScopeValueName, UnpreparedValue };
 export { DuplicateValueError, Injection, TypeInjectError, UnpreparedError };
 
 type ScopeExport<Resource> = {
