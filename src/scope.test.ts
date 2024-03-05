@@ -7,28 +7,26 @@ describe(Scope, () => {
 	const [a, b, c] = [randomString(), randomString(), randomString()];
 	const names = [a, b, c];
 
-	function setup(): [Scope<number>, ReturnType<Scope<number>['injector']>] {
+	function setup(): [Scope<number>, ReturnType<Scope<number>['export']>] {
 		const scope = new Scope<number>();
-		const inject = scope.injector();
+		const { declare, inject } = scope.export();
 
 		beforeEach(() => {
-			scope
-				.declare(a, v => v + 2)
-				.declare(b, [a], v => inject(a).number * v)
-				.declare(c, [b], v => (inject(b).number + v).toString())
-				;
+			declare(a, v => v + 2);
+			declare(b, [a], v => inject(a).number * v);
+			declare(c, [b], v => (inject(b).number + v).toString());
 
 			return () => scope.clear();
 		});
 
-		return [scope, inject];
+		return [scope, { declare, inject }];
 	}
 
-	describe(Scope.prototype.declare, () => {
-		const [scope, _] = setup();
+	describe('declare', () => {
+		const [scope, { declare }] = setup();
 
 		it('disallows duplicate value names', () => {
-			expect(() => scope.declare(a, () => {})).to.throw(DuplicateValueError);
+			expect(() => declare(a, () => {})).to.throw(DuplicateValueError);
 		});
 
 		it('stores values', () => {
@@ -58,8 +56,8 @@ describe(Scope, () => {
 		});
 	});
 
-	describe.each(names.toReversed())(`${Scope.prototype.injector.name} %s`, name => {
-		const [scope, inject] = setup();
+	describe.each(names.toReversed())(`inject %s`, name => {
+		const [scope, { inject }] = setup();
 
 		it('fails when unprepared', () => {
 			expect(() => inject(name)).to.throw(UnpreparedError);

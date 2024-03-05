@@ -7,6 +7,30 @@ import { UnpreparedError } from './scope/unprepared-error';
 export type { InjectionName, PreparedValue, ProvideWith, ScopeValue, UnpreparedValue };
 export { DuplicateValueError, Injection, TypeInjectError, UnpreparedError };
 
+type ScopeExport<Resource> = {
+	/**
+	 * Define what value will be given to `name` when the {@link Resource} is {@link prepare | provided}.
+	 * @param name of the value
+	 * @param dependencies what other declarations must be {@link prepare | prepared} before this
+	 * @param as_ how to define the value
+	 * @throws {@link DuplicateValueError} if `name` was already defined
+	 * @throws {@link TypeError} if `as_` is not given
+	 */
+	declare:
+		& ((name: InjectionName, as_: (resource: Resource) => unknown) => void)
+		& ((name: InjectionName, dependencies: InjectionName[], as_: (resource: Resource) => unknown) => void)
+		,
+
+	/**
+	 * Put a value from this scope into the lexical scope
+	 * @param name of the value to get
+	 * @returns the value in {@link Scope}
+	 * @throws {@link ReferenceError} if the `name` was not {@link defined}
+	 * @throws {@link UnpreparedError} if `name` was not prepared
+	 */
+	inject: (name: InjectionName) => Injection,
+};
+
 /**
  * A mechanism to {@link declare | provide} in terms of a {@link Resource}, so that once it becomes available the values can be {@link inject}ed into lexical scopes.
  */
@@ -36,36 +60,33 @@ export class Scope<Resource = unknown> {
 	}
 
 	/**
-	 * Define what value will be given to `name` when the {@link Resource} is {@link prepare | provided}.
-	 * @param name of the value
-	 * @param dependencies what other declarations must be {@link prepare | prepared} before this
-	 * @param as_ how to define the value
-	 * @throws {@link DuplicateValueError} if `name` was already defined
-	 * @throws {@link TypeError} if `as_` is not given
+	 * @returns functions which can be used to declare scope values and inject scope values into lexical scope
 	 */
-	public declare(this: this, name: InjectionName, as_: (resource: Resource) => unknown): this;
-	public declare(this: this, name: InjectionName, dependencies: InjectionName[], as_: (resource: Resource) => unknown): this;
-	public declare(
-		this: this,
-		name: InjectionName,
-		asOrDependencies: InjectionName[] | ProvideWith<Resource>,
-		as_?: ProvideWith<Resource>,
-	) {
-		if (this.values.has(name)) {
-			throw new DuplicateValueError(name);
-		}
-
-		if (typeof asOrDependencies === 'function') {
-			as_ = asOrDependencies;
-		} else {
-			this.dependencyTree.on(asOrDependencies, name);
-			if (as_ === undefined) {
-				throw new TypeError('Must specify function to provide with');
+	public export(): ScopeExport<Resource> {
+		const declare = (name: InjectionName, asOrDependencies: InjectionName[] | ProvideWith<Resource>, as_?: ProvideWith<Resource>) => {
+			if (this.values.has(name)) {
+				throw new DuplicateValueError(name);
 			}
+
+			if (typeof asOrDependencies === 'function') {
+				as_ = asOrDependencies;
+			} else {
+				this.dependencyTree.on(asOrDependencies, name);
+				if (as_ === undefined) {
+					throw new TypeError('Must specify function to provide with');
+				}
+			}
+
+			this.values.set(name, { prepared: false, fn: as_ });
+			return this;
 		}
 
-		this.values.set(name, { prepared: false, fn: as_ });
-		return this;
+		const inject = (name: InjectionName) => {
+			const value = this.indexPreparedValues(name);
+			return new Injection(value.cached);
+		};
+
+		return { declare, inject };
 	}
 
 	/**
@@ -96,21 +117,6 @@ export class Scope<Resource = unknown> {
 		return value;
 	}
 
-	/** @returns a callable which will get inject values from this {@link Scope} into the lexical scope */
-	public injector(this: this):
-		/**
-		 * @param name of the value to get
-		 * @returns the value in {@link Scope}
-		 * @throws {@link ReferenceError} if the `name` was not {@link defined}
-		 * @throws {@link UnpreparedError} if `name` was not prepared
-		 */
-		(name: InjectionName) => Injection {
-		return (name: InjectionName) => {
-			const value = this.indexPreparedValues(name);
-			return new Injection(value.cached);
-		};
-	}
-
 	/**
 	 * @param name the value to prepare
 	 * @param resource the resource to provide the scope
@@ -132,5 +138,12 @@ export class Scope<Resource = unknown> {
 			const cached = value.fn(resource);
 			this.values.set(dependency, { cached, prepared: true });
 		}
+	}
+
+	/**
+	 * {@link prepare} all of the values in scope for {@link inject}ion
+	 */
+	public prepareAll(this: this, resource: Resource): void {
+
 	}
 }
