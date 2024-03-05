@@ -59,7 +59,7 @@ Container.prototype.withCargoHome = function(
 Container.prototype.withCargoInstall = function(
 	this: Container,
 	crate: string,
-	{ features = [], force = true, defaultFeatures = true }: ContainerWithCargoInstallOpts = {},
+	{ features = [], force = false, defaultFeatures = true }: ContainerWithCargoInstallOpts = {},
 ): Container {
 	const installArgs = ['cargo', 'install', crate, '--features', features.join(',')];
 
