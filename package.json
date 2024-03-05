@@ -3,7 +3,7 @@
 	"description": "Modular pipelines for dagger",
 	"license": "GPL-3.0",
 	"name": "@iron-e/scabbard",
-	"version": "0.2.3",
+	"version": "0.3.0",
 	"bugs": {
 		"url": "https://github.com/Iron-E/scabbard/issues"
 	},
