@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, test } from 'vitest';
 import { DuplicateValueError, Scope, UnpreparedError } from './scope';
 import { randomString } from './util/rand.test';
-import { TypeOf } from '.';
 
 describe(Scope, () => {
 	const [a, b, c] = [randomString(), randomString(), randomString()];
