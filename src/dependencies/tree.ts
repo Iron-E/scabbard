@@ -6,21 +6,21 @@ type _Dependencies = Dependencies<true>;
 
 /** A system of connected {@link Dependency | Dependenc}ies */
 export class DependencyTree {
-	public constructor(private readonly deps: Map<DepName, _Dependencies> = new Map()) { }
+	public constructor(private readonly dependencies: Map<DepName, _Dependencies> = new Map()) { }
 
 	/** The names of all dependencies registered */
 	public get names(): IterableIterator<DepName> {
-		return this.deps.keys();
+		return this.dependencies.keys();
 	}
 
 	/** The number of dependencies */
 	public get size(): number {
-		return this.deps.size;
+		return this.dependencies.size;
 	}
 
 	/** Removes all dependencies from the tree */
 	public clear(this: this): void {
-		this.deps.clear();
+		this.dependencies.clear();
 	}
 
 	/**
@@ -28,19 +28,19 @@ export class DependencyTree {
 	 * @returns the existing dependency with `name`, if it exists, or a new one of it didn't.
 	 */
 	public get(this: this, name: DepName): Dependencies | undefined {
-		return this.deps.get(name);
+		return this.dependencies.get(name);
 	}
 
 	/**
 	 * The same as {@link get} but typed to allow mutation.
 	 */
 	private getOrInit(this: this, name: DepName): _Dependencies {
-		let dep = this.deps.get(name);
-		if (dep === undefined) {
-			this.deps.set(name, dep = new Set());
+		let subdependencies = this.dependencies.get(name);
+		if (subdependencies === undefined) {
+			this.dependencies.set(name, subdependencies = new Set());
 		}
 
-		return dep;
+		return subdependencies;
 	}
 
 	/**
@@ -51,6 +51,22 @@ export class DependencyTree {
 	public loadOrder(this: this, name: DepName): _Dependencies {
 		const dep = this.getOrInit(name);
 		return this.transitivelyDependsOn(name, dep);
+	}
+
+	/**
+	 * @param name the {@link DepName | name} of the {@link Dependency} to get.
+	 * @param [transitive=false] whether to include transitive dependencies. When transitive dependencies are included, they are given a valid load order
+	 * @returns the existing {@link Dependency}, or a new one if it did not exist.
+	 */
+	public loadAllOrder(this: this): _Dependencies {
+		let order: _Dependencies = new Set();
+		for (const [dependency, subdependencies] of this.dependencies) {
+			if (!order.has(dependency)) { // already loaded
+				this.transitivelyDependsOn(dependency, subdependencies, order);
+			}
+		}
+
+		return order;
 	}
 
 	/**
