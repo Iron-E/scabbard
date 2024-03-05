@@ -52,16 +52,27 @@ export const WITH_PROJECT = setFrom([BASE_CONTAINER, HOST_PROJECT_DIR, IGNORE_FI
 
 	return baseContainer
 		.pipeline('copy project directory')
-		.withWorkDirectory(hostProjectDir, { exclude: ignoreFile });
+		.withWorkDirectory(hostProjectDir, { exclude: ignoreFile })
+		;
 });
 
 /**
+ * The version of `cargo-hack` to install. Example: `0.6.20`
+ * @returns string
+ */
+export const CARGO_HACK_VERSION = setTo(`${prefix}CargoHackVersion`, '');
+
+/**
+ * @param {@link CARGO_HACK_VERSION} the container to install cargo hack on
  * @param {@link WITH_PROJECT} the container to install cargo hack on
  * @returns {@link Container} the {@link WITH_PROJECT | project container} with `cargo hack`
  */
-export const WITH_CARGO_HACK = setFrom([WITH_PROJECT], `${prefix}CargoHack`, async (_, inject) => {
+export const WITH_CARGO_HACK = setFrom([CARGO_HACK_VERSION, WITH_PROJECT], `${prefix}CargoHack`, async (_, inject) => {
+	const cargoHackVersion = (await inject(CARGO_HACK_VERSION)).type('string');
 	const withProject = (await inject(WITH_PROJECT)).instance(Container);
+
 	return withProject
 		.pipeline('install cargo-hack')
-		.withCargoInstall('cargo-hack@0.6.20');
+		.withCargoInstall('cargo-hack', { version: cargoHackVersion })
+		;
 });

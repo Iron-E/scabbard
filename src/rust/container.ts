@@ -17,6 +17,9 @@ export type ContainerWithCargoInstallOpts = Superset<{
 
 	/** Use `--force` */
 	force: boolean,
+
+	/** The `--version` to install */
+	version: string,
 }>;
 
 /** base dependencies for working with rust projects */
@@ -53,15 +56,16 @@ Container.prototype.withCargoHome = function(
 ): Container {
 	return this
 		.withEnvVariable('CARGO_HOME', mountPoint)
-		.withMountedCache(mountPoint, volume);
+		.withMountedCache(mountPoint, volume)
+		;
 };
 
 Container.prototype.withCargoInstall = function(
 	this: Container,
 	crate: string,
-	{ features = [], force = false, defaultFeatures = true }: ContainerWithCargoInstallOpts = {},
+	{ features = [], force = false, defaultFeatures = true, version = '' }: ContainerWithCargoInstallOpts = {},
 ): Container {
-	const installArgs = ['cargo', 'install', crate, '--features', features.join(',')];
+	const installArgs = ['cargo', 'install', crate, '--features', features.join(','), '--version', version];
 
 	if (!defaultFeatures) { installArgs.push('--no-default-features'); }
 	if (force) { installArgs.push('--force'); }
