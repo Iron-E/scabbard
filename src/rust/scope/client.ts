@@ -1,7 +1,7 @@
 import { BASE_DEPENDENCIES } from '../container';
-import { PROJECT_CONTAINER } from '../../std_scope';
+import { HOST_PROJECT_DIR, IGNORE_FILE } from '../../std_scope';
 import { set, setWith, setTo } from '../../pipelines';
-import { type Client, CacheVolume, Container } from '@dagger.io/dagger';
+import { type Client, CacheVolume, Container, Directory } from '@dagger.io/dagger';
 
 
 /**
@@ -10,6 +10,7 @@ import { type Client, CacheVolume, Container } from '@dagger.io/dagger';
  * @see {@link Client.cargoHomeCache}
  */
 export const CARGO_BUILD_CACHE = set(client => client.cacheVolume('cargo-build'));
+
 /**
  * The {@link Client} with `$CARGO_HOME` cache
  * @returns {@link CacheVolume}
@@ -27,20 +28,26 @@ export const RUST_IMAGE_NAME = setTo('rust:alpine');
  * @param {@link CARGO_HOME_CACHE} the cargo cache
  * @returns {@link Container} the {@link Client} with `rust:alpine` as a base image, and with the base dependencies.
  */
-export const RUST_CONTAINER = setWith([CARGO_BUILD_CACHE, CARGO_HOME_CACHE, PROJECT_CONTAINER, RUST_IMAGE_NAME], (_, inject) => {
-	const cargoBuildCache = inject(CARGO_BUILD_CACHE).instance(CacheVolume);
-	const cargoHomeCache = inject(CARGO_HOME_CACHE).instance(CacheVolume);
-	const projectContainer = inject(PROJECT_CONTAINER).instance(Container);
-	const rustImageName = inject(RUST_IMAGE_NAME).type('string');
+export const RUST_CONTAINER = setWith(
+	[CARGO_BUILD_CACHE, CARGO_HOME_CACHE, HOST_PROJECT_DIR, IGNORE_FILE, RUST_IMAGE_NAME],
+	(client, inject) => {
+		const cargoHomeCache = inject(CARGO_HOME_CACHE).instance(CacheVolume);
+		const hostProjectDir = inject(HOST_PROJECT_DIR).instance(Directory);
+		const ignoreFile = inject(IGNORE_FILE).optional.instance(Array<string>);
 
-	return projectContainer
-		.pipeline('install deps')
-		.fromWithDeps(rustImageName, BASE_DEPENDENCIES)
-		.pipeline('mount cargo cache')
-		.withCargoBuildCache(cargoBuildCache)
-		.withCargoHomeCache(cargoHomeCache)
-		;
-});
+		const rustImageName = inject(RUST_IMAGE_NAME).type('string');
+
+		return client
+			.container()
+			.pipeline('install deps')
+			.fromWithDeps(rustImageName, BASE_DEPENDENCIES)
+			.pipeline('mount cargo cache')
+			.withCargoHomeCache(cargoHomeCache)
+			.pipeline('copy project directory')
+			.withWorkDirectory(hostProjectDir, { exclude: ignoreFile })
+			;
+	},
+);
 
 /**
  * The version of `cargo-hack` to install. Example: `0.6.20`
