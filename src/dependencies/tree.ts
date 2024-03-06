@@ -83,9 +83,12 @@ export class DependencyTree {
 	 * @returns the {@link DependencyTree} object
 	 * @throws {@link DependencyCycleError} if any addition would be invalid
 	 */
-	public on(this: this, dependsOn: readonly DepName[], name: DepName): this {
+	public on(this: this, dependsOn: Iterable<DepName>, name: DepName): this {
 		const dep = this.getOrInit(name);
-		dependsOn.forEach(dep.add, dep);
+		for (const dependency of dependsOn) {
+			dep.add(dependency);
+		}
+
 		return this;
 	}
 

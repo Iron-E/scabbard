@@ -1,7 +1,7 @@
 import type { Superset } from '../util';
 import { Container, type CacheVolume } from '@dagger.io/dagger';
 
-/** Options for {@link Container.withCargoHome} */
+/** Options for {@link Container.withCargoHomeCache} */
 export type ContainerWithCargoCacheOpts = Superset<{
 	/** the mount point for cargo home */
 	mountPoint: string,
@@ -36,7 +36,16 @@ declare module '@dagger.io/dagger' {
 		 * @see {@link Client.cargoHomeCache}
 		 * @see {@link Container.withMountedCache}
 		 */
-		withCargoHome(this: Readonly<this>, volume: CacheVolume, opts?: ContainerWithCargoCacheOpts): this;
+		withCargoBuildCache(this: Readonly<this>, volume: CacheVolume, opts?: ContainerWithCargoCacheOpts): this;
+
+		/**
+		 * @param volumes the cache volumes.
+		 * @param mountPoint the root dir where the caches are mounted. Defaults to {@link CARGO_CACHE_MOUNT_POINT}
+		 * @returns the container with the cargo cache volumes mounted
+		 * @see {@link Client.cargoHomeCache}
+		 * @see {@link Container.withMountedCache}
+		 */
+		withCargoHomeCache(this: Readonly<this>, volume: CacheVolume, opts?: ContainerWithCargoCacheOpts): this;
 
 		/**
 		 * @param crate from {@link crates.io}.
@@ -49,7 +58,18 @@ declare module '@dagger.io/dagger' {
 	}
 }
 
-Container.prototype.withCargoHome = function(
+Container.prototype.withCargoHomeCache = function(
+	this: Container,
+	volume: CacheVolume,
+	{ mountPoint = CARGO_CACHE_MOUNT_POINT }: ContainerWithCargoCacheOpts = {},
+): Container {
+	return this
+		.withEnvVariable('CARGO_HOME', mountPoint)
+		.withMountedCache(mountPoint, volume)
+		;
+};
+
+Container.prototype.withCargoHomeCache = function(
 	this: Container,
 	volume: CacheVolume,
 	{ mountPoint = CARGO_CACHE_MOUNT_POINT }: ContainerWithCargoCacheOpts = {},

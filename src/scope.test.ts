@@ -6,7 +6,9 @@ describe(Scope, () => {
 	const b = Math.random();
 	const c = Math.random();
 	const d = Math.random();
-	const names = [a, b, c, d];
+	const k = Math.random();
+	const j = Math.random();
+	const names = [a, b, c, d, k, j];
 
 	function setup(): Scope<number> {
 		const scope = new Scope<number>();
@@ -16,6 +18,9 @@ describe(Scope, () => {
 			scope.setTo(Math.random(), b);
 			scope.setWith([a, b], async (v, inject) => (inject(a).type('number') + inject(b).type('number')) * v, c);
 			scope.setAlias(b, d);
+			scope.setCopy(d, k);
+			scope.setCopy(d, j);
+			scope.setOver(j, (v, oldValue) => oldValue.type('number') + v);
 
 			return () => scope.clear();
 		});
@@ -34,25 +39,56 @@ describe(Scope, () => {
 				;
 		});
 
+		async function manuallyResolveValueNamedK() {
+			const inject = scope['inject'];
+			const resource = Math.random();
+
+			const { fn: aFn } = scope['values'].get(a) as UnpreparedValue<number>;
+			const aValue = aFn(resource, inject);
+			scope['values'].set(a, { prepared: true, cached: aValue });
+
+			const { cached: bValue } = scope['values'].get(b) as PreparedValue<number>;
+
+			const { fn: dFn } = scope['values'].get(d) as UnpreparedValue<number>;
+			const dValue = await dFn(resource, inject);
+			scope['values'].set(d, { prepared: true, cached: dValue });
+
+			const { fn: kFn } = scope['values'].get(k) as UnpreparedValue<number>;
+			const kValue = await kFn(resource, inject);
+			scope['values'].set(k, { prepared: true, cached: kValue });
+
+			return { aValue, bValue, dValue, kValue };
+		}
+
 		describe('setAlias', () => {
-			it('aliases values', async () => {
-				const inject = scope['inject'];
-				const resource = 3;
+			beforeEach(() => {
+				scope.setTo(Math.random(), b);
+			});
 
-				const { fn: aFn } = scope['values'].get(a) as UnpreparedValue<number>;
-				const aValue = aFn(resource, inject);
-				scope['values'].set(a, { prepared: true, cached: aValue });
-
-				const { cached: bValue } = scope['values'].get(b) as PreparedValue<number>;
-
-				const { fn: dFn } = scope['values'].get(d) as UnpreparedValue<number>;
-				const dValue = await dFn(resource, inject);
-
+			it('follows updates in original', async () => {
+				const { bValue, dValue } = await manuallyResolveValueNamedK();
 				expect(dValue).to.eql(bValue);
+			});
+
+			it('unaliases when written to', async () => {
+				scope.set(Math.random.bind(Math), d);
+				const { bValue, dValue } = await manuallyResolveValueNamedK();
+				expect(dValue).not.to.eql(bValue);
 			});
 		});
 
-		describe('set{,Alias,With}', () => {
+		describe('set{Alias,Copy}', () => {
+			it('mirrors values', async () => {
+				const { bValue, dValue, kValue } = await manuallyResolveValueNamedK();
+
+				expect(kValue)
+					.to.eql(dValue)
+					.to.eql(bValue)
+					;
+			});
+		});
+
+		describe('set{,Alias,Copy,Over,With}', () => {
 			describe('stores lazily', () => {
 				test.each(names.filter(n => n !== b))('value named %s', name => {
 					const value = scope['values'].get(name);
@@ -60,6 +96,17 @@ describe(Scope, () => {
 					expect(value).to.have.property('fn').that.is.a('function');
 					expect(value).to.have.property('prepared').that.is.false;
 				});
+			});
+		});
+
+		describe('setCopy', () => {
+			beforeEach(() => {
+				scope.set(Math.random.bind(Math), d);
+			});
+
+			it('does not follow updates in original', async () => {
+				const { kValue, dValue } = await manuallyResolveValueNamedK();
+				expect(kValue).not.to.eql(dValue);
 			});
 		});
 

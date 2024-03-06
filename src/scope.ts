@@ -1,4 +1,14 @@
-import type { AsyncInjectFn, DeclareFn, DeriveFn, InjectFn, PreparedValue, ScopeValue, ScopeValueName, UnpreparedValue } from './scope/value';
+import type {
+	AsyncInjectFn,
+	DeclareFn,
+	DeclareOverFn,
+	DeriveFn,
+	InjectFn,
+	PreparedValue,
+	ScopeValue,
+	ScopeValueName,
+	UnpreparedValue,
+} from './scope/value';
 import { Injection, TypeInjectError } from './scope/injection';
 import { DependencyTree } from './dependencies';
 import { UnpreparedError } from './scope/unprepared-error';
@@ -31,7 +41,22 @@ type SetAliasFn = {
 
 	/**
 	 * @param of the name `name` is aliased to
+	 * @returns a unique name
+	 */
+	(of: ScopeValueName): ScopeValueName;
+};
+
+type SetCopyFn = {
+	/**
+	 * @param of the value name being copied form
+	 * @param name of the output value
 	 * @returns `name`
+	 */
+	<T extends ScopeValueName = ScopeValueName>(of: ScopeValueName, name: T): T;
+
+	/**
+	 * @param of the value name being copied form
+	 * @returns a unique name
 	 */
 	(of: ScopeValueName): ScopeValueName;
 };
@@ -46,24 +71,26 @@ type SetToFn = {
 
 	/**
 	 * @param value the value to set `name` to
-	 * @returns `name`
+	 * @returns a unique name
 	 */
 	(value: unknown): ScopeValueName;
 };
 
 type SetWithFn<Resource = unknown> = {
 	/**
-	 * @param of the name `name` is aliased to
-	 * @param name of the alias
+	 * @param from the values which must be available before setting this value
+	 * @param valueFn how `name` will be defined when the resource becomes available
+	 * @param name of the value
 	 * @returns `name`
 	 */
-	<T extends ScopeValueName>(from: ScopeValueName[], valueFn: DeriveFn<Resource>, name: T): T;
+	<T extends ScopeValueName>(from: Iterable<ScopeValueName>, valueFn: DeriveFn<Resource>, name: T): T;
 
 	/**
-	 * @param of the name `name` is aliased to
-	 * @returns `name`
+	 * @param from the values which must be available before setting this value
+	 * @param valueFn how to define this value when the resource becomes available
+	 * @returns a unique name for this scope value
 	 */
-	(from: ScopeValueName[], valueFn: DeriveFn<Resource>): ScopeValueName;
+	(from: Iterable<ScopeValueName>, valueFn: DeriveFn<Resource>): ScopeValueName;
 };
 
 /**
@@ -185,8 +212,8 @@ export class Scope<Resource = unknown> {
 	 * @remarks
 	 * This is a property of {@link Scope}, not a method, because it is meant to be exposed to others without need of `thisArg` binding.
 	 */
-	public readonly set: SetFn<Resource> = (valueFn: DeclareFn<Resource>, name?: ScopeValueName) => {
-		this.values.set(name ??= this.uniqueName(), { prepared: false, fn: valueFn });
+	public readonly set: SetFn<Resource> = (valueFn: DeclareFn<Resource>, name: ScopeValueName = this.uniqueName()) => {
+		this.values.set(name, { prepared: false, fn: valueFn });
 		return name;
 	};
 
@@ -197,8 +224,54 @@ export class Scope<Resource = unknown> {
 	 * @remarks
 	 * This is a property of {@link Scope}, not a method, because it is meant to be exposed to others without need of `thisArg` binding.
 	 */
-	public readonly setAlias: SetAliasFn = (of: ScopeValueName, name?: ScopeValueName) => {
-		return this.setWith([of], (_, inject) => inject(of).value, name ?? this.uniqueName());
+	public readonly setAlias: SetAliasFn = (of: ScopeValueName, name: ScopeValueName = this.uniqueName()) => {
+		return this.setWith([of], (_, inject) => inject(of).value, name);
+	}
+
+	/**
+	 * Give a {@link ScopeValueName} another name.
+	 * WARN: may copy a {@link setAlias}, in which case copied values may be updated unexpectedly!
+	 *
+	 * @remarks
+	 * This is a property of {@link Scope}, not a method, because it is meant to be exposed to others without need of `thisArg` binding.
+	 */
+	public readonly setCopy: SetCopyFn = (of: ScopeValueName, name: ScopeValueName = this.uniqueName()) => {
+		const value = this.indexValues(of);
+		if (value.prepared) {
+			return this.setTo(value.cached, name);
+		}
+
+		const dependencies = this.dependencyTree.get(of);
+		if (dependencies === undefined || dependencies.size === 0) {
+			return this.set(value.fn as DeclareFn<Resource>, name);
+		}
+
+		return this.setWith(dependencies, value.fn, name);
+	}
+
+	/**
+	 * @param name of the value overwritten
+	 * @param as the new definition of the value
+	 */
+	public readonly setOver = (name: ScopeValueName, as: DeclareOverFn<Resource>): void => {
+		const value = this.indexValues(name);
+		if (value.prepared) {
+			this.set(this.wrapOverDeclareFn(as, value.cached), name);
+			return;
+		}
+
+		const declareFn: DeclareFn<Resource> = async resource => {
+			const cached = await value.fn(resource, this.inject);
+			return this.wrapOverDeclareFn(as, cached)(resource);
+		};
+
+		const dependencies = this.dependencyTree.get(name);
+		if (dependencies === undefined || dependencies.size === 0) {
+			this.set(declareFn, name);
+		} else {
+			this.setWith(dependencies, declareFn, name);
+		}
+
 	}
 
 	/**
@@ -207,8 +280,8 @@ export class Scope<Resource = unknown> {
 	 * @remarks
 	 * This is a property of {@link Scope}, not a method, because it is meant to be exposed to others without need of `thisArg` binding.
 	 */
-	public readonly setTo: SetToFn = (value: unknown, name?: ScopeValueName) => {
-		this.values.set(name ??= this.uniqueName(), { cached: value, prepared: true });
+	public readonly setTo: SetToFn = (value: unknown, name: ScopeValueName = this.uniqueName()) => {
+		this.values.set(name, { cached: value, prepared: true });
 		return name;
 	}
 
@@ -218,8 +291,12 @@ export class Scope<Resource = unknown> {
 	 * @remarks
 	 * This is a property of {@link Scope}, not a method, because it is meant to be exposed to others without need of `thisArg` binding.
 	 */
-	public readonly setWith: SetWithFn<Resource> = (from: ScopeValueName[], valueFn: DeriveFn<Resource>, name?: ScopeValueName) => {
-		this.dependencyTree.on(from, name ??= this.uniqueName());
+	public readonly setWith: SetWithFn<Resource> = (
+		from: Iterable<ScopeValueName>,
+		valueFn: DeriveFn<Resource>,
+		name: ScopeValueName = this.uniqueName(),
+	) => {
+		this.dependencyTree.on(from, name);
 		return this.set(valueFn as DeclareFn<Resource>, name);
 	}
 
@@ -233,5 +310,17 @@ export class Scope<Resource = unknown> {
 		}
 
 		throw new Error('Failed to generate unique name in 1000 iterations');
+	}
+
+	/**
+	 * Wrap a {@link DeclareOverFn} into a {@link DeclareFn} using the `value`
+	 * @param cb the function to wrap
+	 * @param value the value to provide to the {@link DeclareOverFn}
+	 */
+	private wrapOverDeclareFn(cb: DeclareOverFn<Resource>, value: unknown): DeclareFn<Resource> {
+		return resource => {
+			const injection = new Injection(value, true);
+			return cb(resource, injection);
+		}
 	}
 }
