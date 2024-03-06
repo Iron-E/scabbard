@@ -15,11 +15,11 @@ declare global {
 }
 
 /** Registered pipes to run */
-const PIPES: Readonly<{ name: string, fn: Fn }>[] = [];
+const pipelines: Fn[] = [];
 
-/** Values  */
-const SCOPE = new Scope<Client>();
-export const { set, setAlias, setCopy, setOver , setTo, setWith } = SCOPE;
+/** Values which can be provided to `pipelines` via {@link Scope.inject}  */
+const scope = new Scope<Client>();
+export const { set, setAlias, setCopy, setOver, setTo, setWith } = scope;
 
 /**
  * Queues a pipeline to be {@link run}.
@@ -27,8 +27,8 @@ export const { set, setAlias, setCopy, setOver , setTo, setWith } = SCOPE;
  * @param description of the pipe
  * @param fn what the pipe does
  */
-export function enqueue(name: string, fn: Fn): void {
-	PIPES.push({ name, fn });
+export function enqueue(fn: Fn): void {
+	pipelines.push(fn);
 }
 
 /** Runs all the {@link register}ed pipes in the pipeline. */
@@ -47,10 +47,9 @@ export async function run(): Promise<void> {
  * @returns handles to the started pipes
  */
 function* startPipesOn(client: Client): Generator<Promise<void>, void> {
-	const inject = SCOPE.prepareInjector(client);
-	for (const pipe of PIPES) {
-		const pipeClient = client.pipeline(pipe.name);
-		yield pipe.fn(pipeClient, inject);
+	const inject = scope.prepareInjector(client);
+	for (const pipeline of pipelines) {
+		yield pipeline(client, inject);
 	}
 }
 

@@ -75,7 +75,7 @@ const BASE_CONTAINER = setFrom([BASE_IMAGE_NAME, WITH_PROJECT], (client, inject)
 });
 
 // queue pipelines. `set` values are only evaluated when requested (thus `async` during `enqueue`)
-enqueue('run my test', async (client, inject) => {
+enqueue(async (client, inject) => {
 	const base = await inject(BASE_CONTAINER);
 	const baseContainer = base.instance(Container);
 	// run methods using `baseContainer` or `client`…
