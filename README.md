@@ -68,9 +68,10 @@ const WITH_PROJECT = set(client => {
 
 // You can derive new values from others.
 // Here, `BASE_IMAGE_NAME` and `WITH_PROJECT` are used to create the base container for the pipeline
-const BASE_CONTAINER = setFrom([BASE_IMAGE_NAME, WITH_PROJECT], async (client, inject) => {
+const BASE_CONTAINER = setFrom([BASE_IMAGE_NAME, WITH_PROJECT], (client, inject) => {
 	const baseImageName = inject(BASE_IMAGE_NAME); // bring `BASE_IMAGE_NAME` into scope
 	const baseImageNameStr = baseImageName.type('string'); // (optional) assert its type
+	// do something with the BASE_IMAGE and `client`
 });
 
 // queue pipelines. `set` values are only evaluated when requested (thus `async` during `enqueue`)
