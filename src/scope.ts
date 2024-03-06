@@ -133,7 +133,7 @@ export class Scope<Resource = unknown> {
 	 * @returns `name`
 	 */
 	public readonly setAlias = <T extends ScopeValueName>(name: T, of: ScopeValueName): T =>
-		this.setFrom([of], name, async (_, inject) => (await inject(of)).value);
+		this.setWith([of], name, async (_, inject) => (await inject(of)).value);
 
 	/**
 	 * Define what value will be given to `name` when the {@link Resource} is {@link prepare | provided}.
@@ -142,7 +142,7 @@ export class Scope<Resource = unknown> {
 	 * @param valueFn how to define the value
 	 * @returns `name`
 	 */
-	public readonly setFrom = <T extends ScopeValueName>(
+	public readonly setWith = <T extends ScopeValueName>(
 		from: ScopeValueName[],
 		name: T,
 		valueFn: DeriveFn<Resource>,
@@ -157,6 +157,6 @@ export class Scope<Resource = unknown> {
 	 * @param the value to set `name` to
 	 * @returns `name`
 	 */
-	public readonly setTo = <T extends ScopeValueName>(name: T, value: unknown): T =>
+	public readonly setTo = <T extends ScopeValueName>(value: unknown, name: T): T =>
 		this.set(name, () => value);
 }

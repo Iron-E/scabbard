@@ -14,8 +14,8 @@ describe(Scope, () => {
 
 		beforeEach(() => {
 			scope.set(a, v => v + 2);
-			scope.setTo(b, Math.random());
-			scope.setFrom([a, b], c, async (v, inject) => ((await inject(a)).type('number') + (await inject(b)).type('number')) * v);
+			scope.setTo(Math.random(), b);
+			scope.setWith([a, b], c, async (v, inject) => ((await inject(a)).type('number') + (await inject(b)).type('number')) * v);
 			scope.setAlias(d, b);
 
 			return () => scope.clear();
@@ -24,7 +24,7 @@ describe(Scope, () => {
 		return scope;
 	}
 
-	describe('set, setAlias, setFrom, setTo', () => {
+	describe('set, setAlias, setWith, setTo', () => {
 		const scope = setup();
 
 		describe('stores values lazily', () => {
@@ -70,7 +70,7 @@ describe(Scope, () => {
 
 	describe(Scope.prototype.prepare, () => {
 		const scope = setup();
-		const { prepare, setFrom } = scope;
+		const { prepare, setWith } = scope;
 
 		describe('caches preparation', () => {
 			it.each(names.toReversed())('of %s', async name => {
@@ -85,12 +85,12 @@ describe(Scope, () => {
 		describe('throws', () => {
 			it('when injecting undeclared values', async () => {
 				const f = randomString();
-				const g = setFrom([f], randomString(), async (_, inject) => (await inject(d)).value);
+				const g = setWith([f], randomString(), async (_, inject) => (await inject(d)).value);
 				await expect(() => prepare(g, Math.random())).rejects.toThrow(ReferenceError);
 			});
 
 			it('when omitting values from dep list', async () => {
-				const e = setFrom([], randomString(), async (_, inject) => (await inject(a)).value);
+				const e = setWith([], randomString(), async (_, inject) => (await inject(a)).value);
 				await expect(() => prepare(e, Math.random())).rejects.toThrow(UnpreparedError);
 			});
 		});
