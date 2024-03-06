@@ -1,8 +1,8 @@
 import './util';
 import { connect, type Client } from '@dagger.io/dagger';
-import { Scope, type InjectFn } from './scope';
+import { Scope, type AsyncInjectFn } from './scope';
 
-type Fn = (client: Client, inject: InjectFn) => Promise<void>;
+type Fn = (client: Client, inject: AsyncInjectFn) => Promise<void>;
 
 declare global {
 	interface String {
