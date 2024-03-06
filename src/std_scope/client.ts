@@ -31,6 +31,7 @@ export const PROJECT_CONTAINER = setWith([HOST_PROJECT_DIR, IGNORE_FILE], (clien
 	});
 
 	return client
+		.container()
 		.pipeline('copy project directory')
 		.withWorkDirectory(hostProjectDir, { exclude: ignoreFile })
 		;

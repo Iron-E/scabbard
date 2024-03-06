@@ -2,7 +2,13 @@ import type { Superset } from '../util';
 import { Container, type CacheVolume } from '@dagger.io/dagger';
 
 /** Options for {@link Container.withCargoHomeCache} */
-export type ContainerWithCargoCacheOpts = Superset<{
+export type ContainerWithCargoBuildCacheOpts = Superset<{
+	/** the mount point for cargo home */
+	mountParentDir: string,
+}>;
+
+/** Options for {@link Container.withCargoHomeCache} */
+export type ContainerWithCargoHomeCacheOpts = Superset<{
 	/** the mount point for cargo home */
 	mountPoint: string,
 }>;
@@ -25,27 +31,27 @@ export type ContainerWithCargoInstallOpts = Superset<{
 /** base dependencies for working with rust projects */
 export const BASE_DEPENDENCIES = ["clang", "file", "gcc", "git", "lld", "musl-dev", "openssl", "openssl-dev"] as const;
 
-export const CARGO_CACHE_MOUNT_POINT = '/usr/local/cargo/.ci_cache' as const;
+export const CARGO_HOME_CACHE_MOUNT_POINT = '/usr/local/cargo/.ci_cache' as const;
 
 declare module '@dagger.io/dagger' {
 	interface Container {
 		/**
 		 * @param volumes the cache volumes.
-		 * @param mountPoint the root dir where the caches are mounted. Defaults to {@link CARGO_CACHE_MOUNT_POINT}
+		 * @param mountPoint the root dir where the caches are mounted. Defaults to {@link CARGO_HOME_CACHE_MOUNT_POINT}
 		 * @returns the container with the cargo cache volumes mounted
 		 * @see {@link Client.cargoHomeCache}
 		 * @see {@link Container.withMountedCache}
 		 */
-		withCargoBuildCache(this: Readonly<this>, volume: CacheVolume, opts?: ContainerWithCargoCacheOpts): this;
+		withCargoBuildCache(this: Readonly<this>, volume: CacheVolume, opts?: ContainerWithCargoBuildCacheOpts): this;
 
 		/**
 		 * @param volumes the cache volumes.
-		 * @param mountPoint the root dir where the caches are mounted. Defaults to {@link CARGO_CACHE_MOUNT_POINT}
+		 * @param mountPoint the root dir where the caches are mounted. Defaults to {@link CARGO_HOME_CACHE_MOUNT_POINT}
 		 * @returns the container with the cargo cache volumes mounted
 		 * @see {@link Client.cargoHomeCache}
 		 * @see {@link Container.withMountedCache}
 		 */
-		withCargoHomeCache(this: Readonly<this>, volume: CacheVolume, opts?: ContainerWithCargoCacheOpts): this;
+		withCargoHomeCache(this: Readonly<this>, volume: CacheVolume, opts?: ContainerWithCargoHomeCacheOpts): this;
 
 		/**
 		 * @param crate from {@link crates.io}.
@@ -58,21 +64,18 @@ declare module '@dagger.io/dagger' {
 	}
 }
 
-Container.prototype.withCargoHomeCache = function(
-	this: Container,
+Container.prototype.withCargoBuildCache = function(
+	this: Readonly<Container>,
 	volume: CacheVolume,
-	{ mountPoint = CARGO_CACHE_MOUNT_POINT }: ContainerWithCargoCacheOpts = {},
+	{ mountParentDir = '/project' }: ContainerWithCargoBuildCacheOpts = {},
 ): Container {
-	return this
-		.withEnvVariable('CARGO_HOME', mountPoint)
-		.withMountedCache(mountPoint, volume)
-		;
+	return this.withMountedCache(`${mountParentDir}/target`, volume);
 };
 
 Container.prototype.withCargoHomeCache = function(
-	this: Container,
+	this: Readonly<Container>,
 	volume: CacheVolume,
-	{ mountPoint = CARGO_CACHE_MOUNT_POINT }: ContainerWithCargoCacheOpts = {},
+	{ mountPoint = CARGO_HOME_CACHE_MOUNT_POINT }: ContainerWithCargoHomeCacheOpts = {},
 ): Container {
 	return this
 		.withEnvVariable('CARGO_HOME', mountPoint)
@@ -81,7 +84,7 @@ Container.prototype.withCargoHomeCache = function(
 };
 
 Container.prototype.withCargoInstall = function(
-	this: Container,
+	this: Readonly<Container>,
 	crate: string,
 	{ features = [], force = false, defaultFeatures = true, version = '""' }: ContainerWithCargoInstallOpts = {},
 ): Container {

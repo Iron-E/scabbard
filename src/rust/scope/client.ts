@@ -1,8 +1,7 @@
-import '../cache';
 import { BASE_DEPENDENCIES } from '../container';
+import { PROJECT_CONTAINER } from '../../std_scope';
 import { set, setWith, setTo } from '../../pipelines';
 import { type Client, CacheVolume, Container } from '@dagger.io/dagger';
-import { PROJECT_CONTAINER } from '../../std_scope';
 
 
 /**
@@ -28,8 +27,9 @@ export const RUST_IMAGE_NAME = setTo('rust:alpine');
  * @param {@link CARGO_HOME_CACHE} the cargo cache
  * @returns {@link Container} the {@link Client} with `rust:alpine` as a base image, and with the base dependencies.
  */
-export const RUST_CONTAINER = setWith([CARGO_HOME_CACHE, PROJECT_CONTAINER, RUST_IMAGE_NAME], (_, inject) => {
-	const cargoCacheHome = inject(CARGO_HOME_CACHE).instance(CacheVolume);
+export const RUST_CONTAINER = setWith([CARGO_BUILD_CACHE, CARGO_HOME_CACHE, PROJECT_CONTAINER, RUST_IMAGE_NAME], (_, inject) => {
+	const cargoBuildCache = inject(CARGO_BUILD_CACHE).instance(CacheVolume);
+	const cargoHomeCache = inject(CARGO_HOME_CACHE).instance(CacheVolume);
 	const projectContainer = inject(PROJECT_CONTAINER).instance(Container);
 	const rustImageName = inject(RUST_IMAGE_NAME).type('string');
 
@@ -37,7 +37,8 @@ export const RUST_CONTAINER = setWith([CARGO_HOME_CACHE, PROJECT_CONTAINER, RUST
 		.pipeline('install deps')
 		.fromWithDeps(rustImageName, BASE_DEPENDENCIES)
 		.pipeline('mount cargo cache')
-		.withCargoHomeCache(cargoCacheHome)
+		.withCargoBuildCache(cargoBuildCache)
+		.withCargoHomeCache(cargoHomeCache)
 		;
 });
 
