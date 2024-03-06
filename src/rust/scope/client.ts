@@ -1,5 +1,6 @@
 import { BASE_DEPENDENCIES } from '../container';
-import { HOST_PROJECT_DIR, IGNORE_FILE } from '../../std_scope';
+import { HOST_PROJECT_DIR, IGNORE_FILE, PROJECT_PATH } from '../../std_scope';
+import { resolve, basename } from 'path';
 import { set, setWith, setTo } from '../../pipelines';
 import { type Client, CacheVolume, Container, Directory } from '@dagger.io/dagger';
 
@@ -9,7 +10,11 @@ import { type Client, CacheVolume, Container, Directory } from '@dagger.io/dagge
  * @returns {@link CacheVolume}
  * @see {@link Client.cargoHomeCache}
  */
-export const CARGO_BUILD_CACHE = set(client => client.cacheVolume('cargo-build'));
+export const CARGO_BUILD_CACHE = setWith([PROJECT_PATH], (client, inject) => {
+	const hostProjectDir = inject(PROJECT_PATH).type('string');
+	const hostProjectDirname = basename(resolve(hostProjectDir));
+	client.cacheVolume(`rust-${hostProjectDirname}`)
+});
 
 /**
  * The {@link Client} with `$CARGO_HOME` cache
