@@ -1,6 +1,7 @@
 export * from './array.mjs';
 export * from './set';
 export * from './string.mjs';
+export type * from './awaitable';
 export type * from './constructor';
 export type * from './dict';
 export type * from './entries-of';

@@ -1,10 +1,70 @@
-import type { DeclareFn, DeriveFn, InjectFn, PreparedValue, ScopeValue, ScopeValueName, UnpreparedValue } from './scope/value';
+import type { AsyncInjectFn, DeclareFn, DeriveFn, InjectFn, PreparedValue, ScopeValue, ScopeValueName, UnpreparedValue } from './scope/value';
 import { Injection, TypeInjectError } from './scope/injection';
 import { DependencyTree } from './dependencies';
 import { UnpreparedError } from './scope/unprepared-error';
 
-export type { InjectFn, PreparedValue, ScopeValue, ScopeValueName, UnpreparedValue };
+export type { AsyncInjectFn, InjectFn, PreparedValue, ScopeValue, ScopeValueName, UnpreparedValue };
 export { Injection, TypeInjectError, UnpreparedError };
+
+type SetFn<Resource = unknown> = {
+	/**
+	 * @param valueFn how to define the value
+	 * @param name of the value
+	 * @returns `name`
+	 */
+	<T extends ScopeValueName = ScopeValueName>(valueFn: DeclareFn<Resource>, name: T): T;
+
+	/**
+	 * @param valueFn how to define the value
+	 * @returns a unique name for this scope value
+	 */
+	(valueFn: DeclareFn<Resource>): ScopeValueName;
+};
+
+type SetAliasFn = {
+	/**
+	 * @param of the name `name` is aliased to
+	 * @param name of the alias
+	 * @returns `name`
+	 */
+	<T extends ScopeValueName = ScopeValueName>(of: ScopeValueName, name: T): T;
+
+	/**
+	 * @param of the name `name` is aliased to
+	 * @returns `name`
+	 */
+	(of: ScopeValueName): ScopeValueName;
+};
+
+type SetToFn = {
+	/**
+	 * @param value the value to set `name` to
+	 * @param name of the value
+	 * @returns `name`
+	 */
+	<T extends ScopeValueName = ScopeValueName>(value: unknown, name: T): T;
+
+	/**
+	 * @param value the value to set `name` to
+	 * @returns `name`
+	 */
+	(value: unknown): ScopeValueName;
+};
+
+type SetWithFn<Resource = unknown> = {
+	/**
+	 * @param of the name `name` is aliased to
+	 * @param name of the alias
+	 * @returns `name`
+	 */
+	<T extends ScopeValueName>(from: ScopeValueName[], valueFn: DeriveFn<Resource>, name: T): T;
+
+	/**
+	 * @param of the name `name` is aliased to
+	 * @returns `name`
+	 */
+	(from: ScopeValueName[], valueFn: DeriveFn<Resource>): ScopeValueName;
+};
 
 /**
  * A mechanism to {@link declare | provide} in terms of a {@link Resource}, so that once it becomes available the values can be {@link inject}ed into lexical scopes.
@@ -13,10 +73,10 @@ export class Scope<Resource = unknown> {
 	public constructor() { }
 
 	/** The dependencies between {@link values} */
-	private readonly dependencyTree: DependencyTree = new DependencyTree();
+	private readonly dependencyTree = new DependencyTree();
 
 	/** That which can be {@link inject}ed by the scope */
-	private readonly values: Map<ScopeValueName, ScopeValue<Resource>> = new Map();
+	private readonly values = new Map<ScopeValueName, ScopeValue<Resource>>();
 
 	/** The names of all the values in scope */
 	public get names(): IterableIterator<ScopeValueName> {
@@ -63,7 +123,7 @@ export class Scope<Resource = unknown> {
 	}
 
 	/** An implementation of {@link InjectFn} that requires values to be prepared *before* they are requested */
-	private readonly inject: InjectFn = async name => {
+	private readonly inject: InjectFn = name => {
 		const value = this.indexPreparedValues(name);
 		return new Injection(value.cached, true);
 	};
@@ -107,7 +167,7 @@ export class Scope<Resource = unknown> {
 	/**
 	 * @returns an implementation of {@link InjectFn} which {@link prepare}s the resources requested of it lazily
 	 */
-	public readonly prepareInjector = (resource: Resource): InjectFn => {
+	public readonly prepareInjector = (resource: Resource): AsyncInjectFn => {
 		return async name => {
 			const value = await this.prepare(name, resource);
 			return new Injection(value.cached, true);
@@ -116,47 +176,45 @@ export class Scope<Resource = unknown> {
 
 	/**
 	 * Define what value will be given to `name` when the {@link Resource} is {@link prepare | provided}.
-	 * @param name of the value
-	 * @param valueFn how to define the value
-	 * @returns `name`
 	 */
-	public readonly set = <T extends ScopeValueName>(name: T, valueFn: DeclareFn<Resource>): T => {
-		this.values.set(name, { prepared: false, fn: valueFn });
+	public readonly set: SetFn<Resource> = (valueFn: DeclareFn<Resource>, name?: ScopeValueName) => {
+		this.values.set(name ??= this.uniqueName(), { prepared: false, fn: valueFn });
 		return name;
 	};
 
 	/**
 	 * Give a {@link ScopeValueName} another name.
 	 * WARN: this is a one way alias. Updating this value will not update the old one.
-	 * @param name of the alias
-	 * @param of the name `name` is aliased to
-	 * @returns `name`
 	 */
-	public readonly setAlias = <T extends ScopeValueName>(name: T, of: ScopeValueName): T =>
-		this.setWith([of], name, async (_, inject) => (await inject(of)).value);
-
-	/**
-	 * Define what value will be given to `name` when the {@link Resource} is {@link prepare | provided}.
-	 * @param from the declarations used to {@link ScopeExport.set | declare} this value
-	 * @param name of the value being declared
-	 * @param valueFn how to define the value
-	 * @returns `name`
-	 */
-	public readonly setWith = <T extends ScopeValueName>(
-		from: ScopeValueName[],
-		name: T,
-		valueFn: DeriveFn<Resource>,
-	): T => {
-		this.dependencyTree.on(from, name);
-		return this.set(name, valueFn as DeclareFn<Resource>);
+	public readonly setAlias: SetAliasFn = (of: ScopeValueName, name?: ScopeValueName) => {
+		return this.setWith([of], (_, inject) => inject(of).value, name ?? this.uniqueName());
 	}
 
 	/**
 	 * Define what value will be given to `name` when the {@link Resource} is {@link prepare | provided}.
-	 * @param name of the value
-	 * @param the value to set `name` to
-	 * @returns `name`
 	 */
-	public readonly setTo = <T extends ScopeValueName>(value: unknown, name: T): T =>
-		this.set(name, () => value);
+	public readonly setTo: SetToFn = (value: unknown, name?: ScopeValueName) => {
+		this.values.set(name ??= this.uniqueName(), { cached: value, prepared: true });
+		return name;
+	}
+
+	/**
+	 * Define what value will be given to `name` when the {@link Resource} is {@link prepare | provided}.
+	 */
+	public readonly setWith: SetWithFn<Resource> = (from: ScopeValueName[], valueFn: DeriveFn<Resource>, name?: ScopeValueName) => {
+		this.dependencyTree.on(from, name ??= this.uniqueName());
+		return this.set(valueFn as DeclareFn<Resource>, name);
+	}
+
+	/** @returns a name which will be unique until the next {@link set} operation. */
+	private readonly uniqueName = (): ScopeValueName => {
+		for (let _ = 0; _ < 1000; ++_) {
+			const name = Math.random();
+			if (!this.values.has(name)) {
+				return name;
+			}
+		}
+
+		throw new Error('Failed to generate unique name in 1000 iterations');
+	}
 }

@@ -24,7 +24,7 @@ describe(DependencyTree, () => {
 			expect(deps.get(key)).to.be.undefined;
 			expect(Array.from(deps.names))
 				.to.be.empty
-				.to.have.lengthOf(deps.size)
+				.to.have.length(deps.size)
 				;
 		});
 	});
@@ -45,7 +45,7 @@ describe(DependencyTree, () => {
 		it('updates properties', () => {
 			expect(Array.from(deps.names))
 				.to.have.eql(Object.keys(data))
-				.have.lengthOf(deps.size)
+				.have.length(deps.size)
 				;
 		});
 	});

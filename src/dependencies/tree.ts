@@ -12,7 +12,7 @@ export class DependencyTree {
 	 * The tree of dependencies.
 	 * `dependencies[<DEPENDENCY_NAME>]` retrieves `<DEPENDENCY_NAME>`'s sub-dependencies.
 	 */
-	private readonly dependencies: Map<DepName, _Dependencies> = new Map();
+	private readonly dependencies = new Map<DepName, _Dependencies>();
 
 	/** The names of all dependencies registered */
 	public get names(): IterableIterator<DepName> {
@@ -24,7 +24,9 @@ export class DependencyTree {
 		return this.dependencies.size;
 	}
 
-	/** Removes all dependencies from the tree */
+	/**
+	 * Removes all dependencies from the tree.
+	 */
 	public readonly clear = (): void => {
 		this.dependencies.clear();
 	}
