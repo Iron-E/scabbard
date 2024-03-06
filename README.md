@@ -32,7 +32,7 @@ import { enqueue } from '@iron-e/scabbard';
 import './foo-bar';
 
 // queue additional pipelines
-enqueue('run my test' , async client => {
+enqueue(async client => {
 	// what happens when the pipeline runs
 });
 
