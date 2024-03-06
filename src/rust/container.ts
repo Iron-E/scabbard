@@ -69,7 +69,7 @@ Container.prototype.withCargoBuildCache = function(
 	volume: CacheVolume,
 	{ mountParentDir = '/project' }: ContainerWithCargoBuildCacheOpts = {},
 ): Container {
-	return this.withMountedCache(`${mountParentDir}/target`, volume);
+	return this.withMountedCache(`${mountParentDir}/target/`, volume);
 };
 
 Container.prototype.withCargoHomeCache = function(
