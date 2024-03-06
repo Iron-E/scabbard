@@ -77,7 +77,8 @@ describe(Scope, () => {
 
 	describe('prepare', () => {
 		const scope = setup();
-		const { prepare, setWith } = scope;
+		const { setWith } = scope;
+		const prepare = scope.prepare.bind(scope);
 
 		describe('caches preparation', () => {
 			it.each(names.toReversed())('of value named %s', async name => {
@@ -104,8 +105,8 @@ describe(Scope, () => {
 	});
 
 	describe('inject', () => {
-		const { prepareInjector } = setup();
-		const inject = prepareInjector(Math.random());
+		const scope = setup();
+		const inject = scope.prepareInjector(Math.random());
 
 		describe('prepares and provides', () => {
 			test.each(names.toReversed())('value named %s', async name => {

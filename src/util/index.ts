@@ -7,7 +7,6 @@ export type * from './dict';
 export type * from './entries-of';
 export type * from './field-name';
 export type * from './instance-of';
-export type * from './method-fn';
 export type * from './mut';
 export type * from './rwset';
 export type * from './struct';

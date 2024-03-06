@@ -27,7 +27,7 @@ export class DependencyTree {
 	/**
 	 * Removes all dependencies from the tree.
 	 */
-	public readonly clear = (): void => {
+	public clear(this: this): void {
 		this.dependencies.clear();
 	}
 
@@ -35,14 +35,14 @@ export class DependencyTree {
 	 * @param name the name of the dependency to get or initialize
 	 * @returns the existing dependency with `name`, if it exists, or a new one of it didn't.
 	 */
-	public readonly get = (name: DepName): Dependencies | undefined => {
+	public get(this: this, name: DepName): Dependencies | undefined {
 		return this.dependencies.get(name);
 	}
 
 	/**
 	 * The same as {@link get} but typed to allow mutation.
 	 */
-	private readonly getOrInit = (name: DepName): _Dependencies => {
+	private getOrInit(this: this, name: DepName): _Dependencies {
 		let subdependencies = this.dependencies.get(name);
 		if (subdependencies === undefined) {
 			this.dependencies.set(name, subdependencies = new Set());
@@ -56,7 +56,7 @@ export class DependencyTree {
 	 * @param [transitive=false] whether to include transitive dependencies. When transitive dependencies are included, they are given a valid load order
 	 * @returns the existing {@link Dependency}, or a new one if it did not exist.
 	 */
-	public readonly loadOrder = (name: DepName): _Dependencies => {
+	public loadOrder(this: this, name: DepName): _Dependencies {
 		const dep = this.getOrInit(name);
 		return this.transitivelyDependsOn(name, dep);
 	}
@@ -66,7 +66,7 @@ export class DependencyTree {
 	 * @param [transitive=false] whether to include transitive dependencies. When transitive dependencies are included, they are given a valid load order
 	 * @returns the existing {@link Dependency}, or a new one if it did not exist.
 	 */
-	public readonly loadAllOrder = (): _Dependencies => {
+	public loadAllOrder(this: this): _Dependencies {
 		let order: _Dependencies = new Set();
 		for (const [dependency, subdependencies] of this.dependencies) {
 			if (!order.has(dependency)) { // already loaded
@@ -83,7 +83,7 @@ export class DependencyTree {
 	 * @returns the {@link DependencyTree} object
 	 * @throws {@link DependencyCycleError} if any addition would be invalid
 	 */
-	public readonly on = (dependsOn: readonly DepName[], name: DepName): this => {
+	public on(this: this, dependsOn: readonly DepName[], name: DepName): this {
 		const dep = this.getOrInit(name);
 		dependsOn.forEach(dep.add, dep);
 		return this;
@@ -95,12 +95,13 @@ export class DependencyTree {
 	 * @param [ordering=new Set()] the previously visited deps. Used to prevent backtracking, since load order is stable. Should be omitted on initial call.
 	 * @returns the load order to for all dependents of `dep`
 	 */
-	private readonly transitivelyDependsOn = (
+	private transitivelyDependsOn(
+		this: this,
 		name: DepName,
 		dependencies: Dependencies,
 		loadOrder: _Dependencies = new Set(),
 		ordering: _Dependencies = new Set(),
-	): _Dependencies => {
+	): _Dependencies {
 		ordering.add(name);
 		for (const dependencyName of dependencies) {
 			const dependency = this.getOrInit(dependencyName);

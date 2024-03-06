@@ -89,7 +89,7 @@ export class Scope<Resource = unknown> {
 	}
 
 	/** Clears the state of the scope provider. */
-	public readonly clear = (): void => {
+	public clear(this: this): void {
 		this.dependencyTree.clear();
 		this.values.clear();
 	}
@@ -100,7 +100,7 @@ export class Scope<Resource = unknown> {
 	 * @throws {@link ReferenceError} if the `name` was not {@link defined}
 	 * @throws {@link UnpreparedError} if `name` was not prepared
 	 */
-	private readonly indexPreparedValues = (name: ScopeValueName): PreparedValue => {
+	private indexPreparedValues(this: this, name: ScopeValueName): PreparedValue {
 		const value = this.indexValues(name);
 		if (!value.prepared) {
 			throw new UnpreparedError(name);
@@ -113,7 +113,7 @@ export class Scope<Resource = unknown> {
 	 * @param name the name of the value
 	 * @throws {@link ReferenceError} when `name` is not in the `state`
 	 */
-	private readonly indexValues = (name: ScopeValueName): ScopeValue<Resource> => {
+	private indexValues(this: this, name: ScopeValueName): ScopeValue<Resource> {
 		const value = this.values.get(name);
 		if (value === undefined) {
 			throw new ReferenceError(`Attempted to prepare value ${name} before it was provided`);
@@ -122,7 +122,12 @@ export class Scope<Resource = unknown> {
 		return value;
 	}
 
-	/** An implementation of {@link InjectFn} that requires values to be prepared *before* they are requested */
+	/**
+	 * An implementation of {@link InjectFn} that requires values to be prepared *before* they are requested
+	 *
+	 * @remarks
+	 * This is a property of {@link Scope}, not a method, because {@link prepare} would need to {@link Function.prototype.bind | bind} it anyway.
+	 */
 	private readonly inject: InjectFn = name => {
 		const value = this.indexPreparedValues(name);
 		return new Injection(value.cached, true);
@@ -136,7 +141,7 @@ export class Scope<Resource = unknown> {
 	 * @throws {@link UnpreparedError} when attempting to access unprepared values inside a {@link DeriveFn}
 	 * @see {@link declare}
 	 */
-	public readonly prepare = async (name: ScopeValueName, resource: Resource): Promise<PreparedValue> => {
+	public async prepare(this: this, name: ScopeValueName, resource: Resource): Promise<PreparedValue> {
 		{
 			const value = this.indexValues(name);
 			if (value.prepared) {
@@ -167,7 +172,7 @@ export class Scope<Resource = unknown> {
 	/**
 	 * @returns an implementation of {@link InjectFn} which {@link prepare}s the resources requested of it lazily
 	 */
-	public readonly prepareInjector = (resource: Resource): AsyncInjectFn => {
+	public prepareInjector(this: this, resource: Resource): AsyncInjectFn {
 		return async name => {
 			const value = await this.prepare(name, resource);
 			return new Injection(value.cached, true);
@@ -176,6 +181,9 @@ export class Scope<Resource = unknown> {
 
 	/**
 	 * Define what value will be given to `name` when the {@link Resource} is {@link prepare | provided}.
+	 *
+	 * @remarks
+	 * This is a property of {@link Scope}, not a method, because it is meant to be exposed to others without need of `thisArg` binding.
 	 */
 	public readonly set: SetFn<Resource> = (valueFn: DeclareFn<Resource>, name?: ScopeValueName) => {
 		this.values.set(name ??= this.uniqueName(), { prepared: false, fn: valueFn });
@@ -185,6 +193,9 @@ export class Scope<Resource = unknown> {
 	/**
 	 * Give a {@link ScopeValueName} another name.
 	 * WARN: this is a one way alias. Updating this value will not update the old one.
+	 *
+	 * @remarks
+	 * This is a property of {@link Scope}, not a method, because it is meant to be exposed to others without need of `thisArg` binding.
 	 */
 	public readonly setAlias: SetAliasFn = (of: ScopeValueName, name?: ScopeValueName) => {
 		return this.setWith([of], (_, inject) => inject(of).value, name ?? this.uniqueName());
@@ -192,6 +203,9 @@ export class Scope<Resource = unknown> {
 
 	/**
 	 * Define what value will be given to `name` when the {@link Resource} is {@link prepare | provided}.
+	 *
+	 * @remarks
+	 * This is a property of {@link Scope}, not a method, because it is meant to be exposed to others without need of `thisArg` binding.
 	 */
 	public readonly setTo: SetToFn = (value: unknown, name?: ScopeValueName) => {
 		this.values.set(name ??= this.uniqueName(), { cached: value, prepared: true });
@@ -200,6 +214,9 @@ export class Scope<Resource = unknown> {
 
 	/**
 	 * Define what value will be given to `name` when the {@link Resource} is {@link prepare | provided}.
+	 *
+	 * @remarks
+	 * This is a property of {@link Scope}, not a method, because it is meant to be exposed to others without need of `thisArg` binding.
 	 */
 	public readonly setWith: SetWithFn<Resource> = (from: ScopeValueName[], valueFn: DeriveFn<Resource>, name?: ScopeValueName) => {
 		this.dependencyTree.on(from, name ??= this.uniqueName());
@@ -207,7 +224,7 @@ export class Scope<Resource = unknown> {
 	}
 
 	/** @returns a name which will be unique until the next {@link set} operation. */
-	private readonly uniqueName = (): ScopeValueName => {
+	private uniqueName(this: this): ScopeValueName {
 		for (let _ = 0; _ < 1000; ++_) {
 			const name = Math.random();
 			if (!this.values.has(name)) {
