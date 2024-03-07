@@ -34,6 +34,7 @@
 	},
 	"exports": {
 		".": { "default": "./dist/index.js", "types": "./dist/index.d.ts" },
+		"./db": { "default": "./dist/db/index.js", "types": "./dist/db/index.d.ts" },
 		"./fs": { "default": "./dist/fs.js", "types": "./dist/fs.d.ts" },
 		"./pipelines": { "default": "./dist/pipelines.js", "types": "./dist/pipelines.d.ts" },
 		"./rust": { "default": "./dist/rust/index.js", "types": "./dist/rust/index.d.ts" },
