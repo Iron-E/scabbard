@@ -13,6 +13,24 @@ export type ContainerWithCargoHomeCacheOpts = Superset<{
 	mountPoint: string,
 }>;
 
+/** Options for {@link Container.withExecCargo} */
+export type ContainerWithExecCargo = Superset<{
+	/** arguments to `cargo` */
+	cargoArgs: string[],
+
+	/** arguments to the `cargo` command */
+	commandArgs: string[],
+}>;
+
+/** Options for {@link Container.withExecCargoHack} */
+export type ContainerWithExecCargoHack = Superset<
+	& ContainerWithExecCargo
+	& {
+		/** arguments to `cargo hack` command */
+		hackArgs: string[],
+	}
+>;
+
 /** Options for {@link Container.withCargoInstall} */
 export type ContainerWithCargoInstallOpts = Superset<{
 	/** If `false`, use `--no-default-features` */
@@ -61,6 +79,20 @@ declare module '@dagger.io/dagger' {
 		 * @see `cargo install --help`
 		 */
 		withCargoInstall(this: Readonly<this>, crate: string, opts?: ContainerWithCargoInstallOpts): this;
+
+		/**
+		 * @param command the cargo command to run, e.g. 'test'
+		 * @param opts the options
+		 * @returns a {@link Container} which will execute the given `cargo` command
+		 */
+		withExecCargo(this: Readonly<Container>, command: string, opts?: ContainerWithExecCargo): this;
+
+		/**
+		 * @param command the cargo command to run, e.g. 'test'
+		 * @param opts the options
+		 * @returns a {@link Container} which will execute the given `cargo` command using `cargo hack`
+		 */
+		withExecCargoHack(this: Readonly<Container>, command: string, opts?: ContainerWithExecCargoHack): this;
 	}
 }
 
@@ -94,4 +126,23 @@ Container.prototype.withCargoInstall = function(
 	if (force) { installArgs.push('--force'); }
 
 	return this.withExec(installArgs);
+};
+
+Container.prototype.withExecCargo = function(
+	this: Readonly<Container>,
+	command: string,
+	{ cargoArgs = [], commandArgs = [] }: ContainerWithExecCargo = {},
+): Container {
+	return this.pipeline(command).withExec(['cargo', ...cargoArgs, command, ...commandArgs]);
+};
+
+Container.prototype.withExecCargoHack = function(
+	this: Readonly<Container>,
+	command: string,
+	{ cargoArgs = [], commandArgs = [], hackArgs = ['--feature-powerset'] }: ContainerWithExecCargoHack = {},
+): Container {
+	return this.withExecCargo(command, {
+		cargoArgs: [...cargoArgs, 'hack', ...hackArgs],
+		commandArgs,
+	});
 };
