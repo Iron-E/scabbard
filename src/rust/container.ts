@@ -118,9 +118,10 @@ Container.prototype.withCargoHomeCache = function(
 Container.prototype.withCargoInstall = function(
 	this: Readonly<Container>,
 	crate: string,
-	{ features = [], force = false, defaultFeatures = true, version = '""' }: ContainerWithCargoInstallOpts = {},
+	{ features = [], force = false, defaultFeatures = true, version = undefined }: ContainerWithCargoInstallOpts = {},
 ): Container {
-	const installArgs = ['cargo', 'install', crate, '--features', features.join(','), '--version', version];
+	const crateVersion = version === undefined || version.length < 1 ? crate : `${crate}@${version}`;
+	const installArgs = ['cargo', 'install', crateVersion, '--features', features.join(',')];
 
 	if (!defaultFeatures) { installArgs.push('--no-default-features'); }
 	if (force) { installArgs.push('--force'); }
