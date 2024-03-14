@@ -1,6 +1,6 @@
 # Scabbard
 
-Miscellaneous utilities for [dagger].
+A minimal, Dagger 0.9+-compatible, pipeline orchestration framework.
 
 ## Installation
 
